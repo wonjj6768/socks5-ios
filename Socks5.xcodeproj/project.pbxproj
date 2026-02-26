@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D30F96622C18058E002DB6BB /* silent.wav in Resources */ = {isa = PBXBuildFile; fileRef = D30F96612C18058E002DB6BB /* silent.wav */; };
+		D30F965E2C18058B002DB6BD /* BackgroundAudioManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D30F965D2C18058B002DB6BD /* BackgroundAudioManager.swift */; };
 		D30F965E2C18058B002DB6BF /* Socks5App.swift in Sources */ = {isa = PBXBuildFile; fileRef = D30F965D2C18058B002DB6BF /* Socks5App.swift */; };
 		D30F96602C18058B002DB6BF /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D30F965F2C18058B002DB6BF /* ContentView.swift */; };
 		D30F96622C18058E002DB6BF /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D30F96612C18058E002DB6BF /* Assets.xcassets */; };
@@ -15,6 +17,9 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		D30F96612C18058E002DB6BA /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		D30F965D2C18058B002DB6BD /* BackgroundAudioManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundAudioManager.swift; sourceTree = "<group>"; };
+		D30F96612C18058E002DB6BB /* silent.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = silent.wav; sourceTree = '<group>'; };
 		D30F965A2C18058B002DB6BF /* Socks5.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Socks5.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D30F965D2C18058B002DB6BF /* Socks5App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Socks5App.swift; sourceTree = "<group>"; };
 		D30F965F2C18058B002DB6BF /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -56,6 +61,9 @@
 			isa = PBXGroup;
 			children = (
 				D30F965D2C18058B002DB6BF /* Socks5App.swift */,
+				D30F965D2C18058B002DB6BD /* BackgroundAudioManager.swift */,
+				D30F96612C18058E002DB6BB /* silent.wav */,
+				D30F96612C18058E002DB6BA /* Info.plist */,
 				D30F965F2C18058B002DB6BF /* ContentView.swift */,
 				D30F96612C18058E002DB6BF /* Assets.xcassets */,
 				D30F96632C18058E002DB6BF /* Preview Content */,
@@ -131,6 +139,7 @@
 			files = (
 				D30F96652C18058E002DB6BF /* Preview Assets.xcassets in Resources */,
 				D30F96622C18058E002DB6BF /* Assets.xcassets in Resources */,
+				D30F96622C18058E002DB6BB /* silent.wav in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -143,6 +152,7 @@
 			files = (
 				D30F96602C18058B002DB6BF /* ContentView.swift in Sources */,
 				D30F965E2C18058B002DB6BF /* Socks5App.swift in Sources */,
+				D30F965E2C18058B002DB6BD /* BackgroundAudioManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -278,6 +288,7 @@
 				DEVELOPMENT_ASSET_PATHS = "\"Socks5/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Socks5/Info.plist";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -306,6 +317,7 @@
 				DEVELOPMENT_ASSET_PATHS = "\"Socks5/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIBackgroundModes = audio;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

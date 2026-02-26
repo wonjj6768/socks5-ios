@@ -7,17 +7,17 @@ import SwiftUI
 import HevSocks5Server
 
 struct ContentView: View {
-    @State private var workersText: String = "4"
-    @State private var listenAddrText: String = "::"
-    @State private var listenPortText: String = "1080"
-    @State private var udpListenAddrText: String = ""
-    @State private var udpListenPortText: String = "1080"
-    @State private var bindIpv4AddrText: String = "0.0.0.0"
-    @State private var bindIpv6AddrText: String = "::"
-    @State private var bindIfaceText: String = ""
-    @State private var authUserText: String = ""
-    @State private var authPassText: String = ""
-    @State private var listenIpv6OnlyToggle: Bool = false
+    @AppStorage("socks5_workers") private var workersText: String = "4"
+    @AppStorage("socks5_listenAddr") private var listenAddrText: String = "::"
+    @AppStorage("socks5_listenPort") private var listenPortText: String = "1080"
+    @AppStorage("socks5_udpListenAddr") private var udpListenAddrText: String = ""
+    @AppStorage("socks5_udpListenPort") private var udpListenPortText: String = "1080"
+    @AppStorage("socks5_bindIpv4Addr") private var bindIpv4AddrText: String = "0.0.0.0"
+    @AppStorage("socks5_bindIpv6Addr") private var bindIpv6AddrText: String = "::"
+    @AppStorage("socks5_bindIface") private var bindIfaceText: String = ""
+    @AppStorage("socks5_authUser") private var authUserText: String = ""
+    @AppStorage("socks5_authPass") private var authPassText: String = ""
+    @AppStorage("socks5_listenIpv6Only") private var listenIpv6OnlyToggle: Bool = false
     @State private var isRunning: Bool = false
 
     var body: some View {
