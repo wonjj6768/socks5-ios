@@ -129,6 +129,33 @@ struct ContentView: View {
                 .background(Color(.secondarySystemBackground))
                 .cornerRadius(12)
 
+                // MARK: - Controls
+                HStack(spacing: 16) {
+                    Button(action: { startServer() }) {
+                        Text("Start")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(isRunning ? Color.gray : Color.green)
+                            .foregroundColor(.white)
+                            .cornerRadius(10)
+                    }
+                    .disabled(isRunning)
+
+                    Button(action: {
+                        hev_socks5_server_quit()
+                    }) {
+                        Text("Stop")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(!isRunning ? Color.gray : Color.red)
+                            .foregroundColor(.white)
+                            .cornerRadius(10)
+                    }
+                    .disabled(!isRunning)
+                }
+
                 // MARK: - Auto Start Toggle
                 Toggle(isOn: $autoStart) {
                     Text("Auto Start on Launch")
@@ -168,34 +195,6 @@ struct ContentView: View {
                 }
                 .toggleStyle(SwitchToggleStyle())
                 .disabled(isRunning)
-
-                // MARK: - Controls
-                HStack(spacing: 16) {
-                    Button(action: { startServer() }) {
-                        Text("Start")
-                            .font(.headline)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(isRunning ? Color.gray : Color.green)
-                            .foregroundColor(.white)
-                            .cornerRadius(10)
-                    }
-                    .disabled(isRunning)
-
-                    Button(action: {
-                        hev_socks5_server_quit()
-                    }) {
-                        Text("Stop")
-                            .font(.headline)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(!isRunning ? Color.gray : Color.red)
-                            .foregroundColor(.white)
-                            .cornerRadius(10)
-                    }
-                    .disabled(!isRunning)
-                }
-                .padding(.top, 8)
             }
             .padding()
         }
