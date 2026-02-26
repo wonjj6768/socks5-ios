@@ -1,0 +1,56 @@
+name: Build Socks5 IPA (Unsigned)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout socks5-ios
+        uses: actions/checkout@v4
+
+      - name: Clone & Build hev-socks5-server xcframework
+        run: |
+          git clone --recursive https://github.com/heiher/hev-socks5-server
+          cd hev-socks5-server
+          ./build-apple.sh
+          cp -r HevSocks5Server.xcframework ../
+
+      - name: Patch project.pbxproj (disable codesign)
+        run: |
+          sed -i '' \
+            's/CODE_SIGN_STYLE = Automatic/CODE_SIGN_STYLE = Manual/g' \
+            Socks5.xcodeproj/project.pbxproj
+
+      - name: Build (Unsigned)
+        run: |
+          xcodebuild build \
+            -project Socks5.xcodeproj \
+            -scheme Socks5 \
+            -configuration Release \
+            -destination "generic/platform=iOS" \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            DEVELOPMENT_TEAM="" \
+            AD_HOC_CODE_SIGNING_ALLOWED=YES
+
+      - name: Package IPA
+        run: |
+          APP_PATH=$(find build/DerivedData -name "Socks5.app" -not -path "*/simulator/*" | head -1)
+          echo "Found app at: $APP_PATH"
+          mkdir -p build/ipa/Payload
+          cp -r "$APP_PATH" build/ipa/Payload/Socks5.app
+          cd build/ipa
+          zip -r Socks5-unsigned.ipa Payload
+          echo "IPA size: $(du -sh Socks5-unsigned.ipa)"
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: Socks5-IPA-Unsigned
+          path: build/ipa/Socks5-unsigned.ipa
+          retention-days: 7
