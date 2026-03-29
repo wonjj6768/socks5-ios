@@ -42,9 +42,9 @@ struct ContentView: View {
 
     @AppStorage("socks5_workers") private var workersText: String = "4"
     @AppStorage("socks5_listenAddr") private var listenAddrText: String = "::"
-    @AppStorage("socks5_listenPort") private var listenPortText: String = "1080"
+    @AppStorage("socks5_listenPort") private var listenPortText: String = "8888"
     @AppStorage("socks5_udpListenAddr") private var udpListenAddrText: String = ""
-    @AppStorage("socks5_udpListenPort") private var udpListenPortText: String = "1080"
+    @AppStorage("socks5_udpListenPort") private var udpListenPortText: String = "8888"
     @AppStorage("socks5_bindIpv4Addr") private var bindIpv4AddrText: String = "0.0.0.0"
     @AppStorage("socks5_bindIpv6Addr") private var bindIpv6AddrText: String = "::"
     @AppStorage("socks5_bindIface") private var bindIfaceText: String = ""
