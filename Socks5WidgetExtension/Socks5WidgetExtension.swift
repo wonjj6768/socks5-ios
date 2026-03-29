@@ -18,11 +18,26 @@ struct Socks5LiveActivityWidget: Widget {
                     .font(.system(.body, design: .monospaced))
                     .lineLimit(1)
 
-                Text("SOCKS5 proxy")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                HStack {
+                    Text("SOCKS5 proxy")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    if context.state.isRunning {
+                        Link(destination: URL(string: "socks5://stop")!) {
+                            Label("Stop", systemImage: "stop.fill")
+                                .font(.caption.weight(.semibold))
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(Color.red.opacity(0.14))
+                                .foregroundStyle(.red)
+                                .clipShape(Capsule())
+                        }
+                    }
+                }
             }
-            .padding(.vertical, 8)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
             .activityBackgroundTint(Color(.systemBackground))
             .activitySystemActionForegroundColor(.accentColor)
         } dynamicIsland: { context in
@@ -39,15 +54,33 @@ struct Socks5LiveActivityWidget: Widget {
                 }
 
                 DynamicIslandExpandedRegion(.bottom) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Proxy Address")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                        Text(context.state.proxyAddress)
-                            .font(.system(.footnote, design: .monospaced))
-                            .lineLimit(1)
+                    HStack(alignment: .bottom, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Proxy Address")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                            Text(context.state.proxyAddress)
+                                .font(.system(.footnote, design: .monospaced))
+                                .lineLimit(1)
+                        }
+
+                        Spacer(minLength: 8)
+
+                        if context.state.isRunning {
+                            Link(destination: URL(string: "socks5://stop")!) {
+                                Label("Stop", systemImage: "stop.fill")
+                                    .font(.caption.weight(.semibold))
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 7)
+                                    .background(Color.red.opacity(0.16))
+                                    .foregroundStyle(.red)
+                                    .clipShape(Capsule())
+                            }
+                        }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, 4)
+                    .padding(.horizontal, 6)
                 }
             } compactLeading: {
                 Image(systemName: "network")

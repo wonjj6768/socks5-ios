@@ -184,6 +184,9 @@ struct ContentView: View {
                 BackgroundAudioManager.shared.resume()
             }
         }
+        .onOpenURL { url in
+            handleDeepLink(url)
+        }
         .onTapGesture {
             UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         }
@@ -285,6 +288,19 @@ struct ContentView: View {
             stopServer()
         } else {
             startServer()
+        }
+    }
+
+    func handleDeepLink(_ url: URL) {
+        guard url.scheme == "socks5" else { return }
+
+        switch url.host {
+        case "stop":
+            stopServer()
+        case "start":
+            startServer()
+        default:
+            break
         }
     }
 
