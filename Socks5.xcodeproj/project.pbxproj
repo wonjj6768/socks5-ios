@@ -7,6 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D31A00012C18058E002DB6BF /* Socks5ActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31A00112C18058E002DB6BF /* Socks5ActivityAttributes.swift */; };
+		D31A00022C18058E002DB6BF /* ServerLiveActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31A00122C18058E002DB6BF /* ServerLiveActivityManager.swift */; };
+		D31A00032C18058E002DB6BF /* Socks5WidgetExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31A00132C18058E002DB6BF /* Socks5WidgetExtension.swift */; };
+		D31A00042C18058E002DB6BF /* Socks5ActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31A00112C18058E002DB6BF /* Socks5ActivityAttributes.swift */; };
+		D31A00052C18058E002DB6BF /* Socks5WidgetExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = D31A00152C18058E002DB6BF /* Socks5WidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D30F96622C18058E002DB6BB /* silent.wav in Resources */ = {isa = PBXBuildFile; fileRef = D30F96612C18058E002DB6BB /* silent.wav */; };
 		D30F965E2C18058B002DB6BD /* BackgroundAudioManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D30F965D2C18058B002DB6BD /* BackgroundAudioManager.swift */; };
 		D30F965E2C18058B002DB6BF /* Socks5App.swift in Sources */ = {isa = PBXBuildFile; fileRef = D30F965D2C18058B002DB6BF /* Socks5App.swift */; };
@@ -16,7 +21,36 @@
 		D30F96722C1809EB002DB6BF /* HevSocks5Server.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = D30F96712C1809EB002DB6BF /* HevSocks5Server.xcframework */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		D31A00212C18058E002DB6BF /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D30F96522C18058B002DB6BF /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D31A00312C18058E002DB6BF;
+			remoteInfo = Socks5WidgetExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		D31A00222C18058E002DB6BF /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				D31A00052C18058E002DB6BF /* Socks5WidgetExtension.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		D31A00112C18058E002DB6BF /* Socks5ActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Socks5ActivityAttributes.swift; sourceTree = "<group>"; };
+		D31A00122C18058E002DB6BF /* ServerLiveActivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerLiveActivityManager.swift; sourceTree = "<group>"; };
+		D31A00132C18058E002DB6BF /* Socks5WidgetExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Socks5WidgetExtension.swift; sourceTree = "<group>"; };
+		D31A00142C18058E002DB6BF /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		D31A00152C18058E002DB6BF /* Socks5WidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = Socks5WidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		D30F96612C18058E002DB6BA /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D30F965D2C18058B002DB6BD /* BackgroundAudioManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundAudioManager.swift; sourceTree = "<group>"; };
 		D30F96612C18058E002DB6BB /* silent.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = silent.wav; sourceTree = '<group>'; };
@@ -45,6 +79,7 @@
 			children = (
 				D30F96712C1809EB002DB6BF /* HevSocks5Server.xcframework */,
 				D30F965C2C18058B002DB6BF /* Socks5 */,
+				D31A00162C18058E002DB6BF /* Socks5WidgetExtension */,
 				D30F965B2C18058B002DB6BF /* Products */,
 			);
 			sourceTree = "<group>";
@@ -53,6 +88,7 @@
 			isa = PBXGroup;
 			children = (
 				D30F965A2C18058B002DB6BF /* Socks5.app */,
+				D31A00152C18058E002DB6BF /* Socks5WidgetExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -62,6 +98,8 @@
 			children = (
 				D30F965D2C18058B002DB6BF /* Socks5App.swift */,
 				D30F965D2C18058B002DB6BD /* BackgroundAudioManager.swift */,
+				D31A00122C18058E002DB6BF /* ServerLiveActivityManager.swift */,
+				D31A00112C18058E002DB6BF /* Socks5ActivityAttributes.swift */,
 				D30F96612C18058E002DB6BB /* silent.wav */,
 				D30F96612C18058E002DB6BA /* Info.plist */,
 				D30F965F2C18058B002DB6BF /* ContentView.swift */,
@@ -69,6 +107,15 @@
 				D30F96632C18058E002DB6BF /* Preview Content */,
 			);
 			path = Socks5;
+			sourceTree = "<group>";
+		};
+		D31A00162C18058E002DB6BF /* Socks5WidgetExtension */ = {
+			isa = PBXGroup;
+			children = (
+				D31A00132C18058E002DB6BF /* Socks5WidgetExtension.swift */,
+				D31A00142C18058E002DB6BF /* Info.plist */,
+			);
+			path = Socks5WidgetExtension;
 			sourceTree = "<group>";
 		};
 		D30F96632C18058E002DB6BF /* Preview Content */ = {
@@ -89,15 +136,34 @@
 				D30F96562C18058B002DB6BF /* Sources */,
 				D30F96572C18058B002DB6BF /* Frameworks */,
 				D30F96582C18058B002DB6BF /* Resources */,
+				D31A00222C18058E002DB6BF /* Embed App Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				D31A00232C18058E002DB6BF /* PBXTargetDependency */,
 			);
 			name = Socks5;
 			productName = Socks5;
 			productReference = D30F965A2C18058B002DB6BF /* Socks5.app */;
 			productType = "com.apple.product-type.application";
+		};
+		D31A00312C18058E002DB6BF /* Socks5WidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D31A00412C18058E002DB6BF /* Build configuration list for PBXNativeTarget "Socks5WidgetExtension" */;
+			buildPhases = (
+				D31A00322C18058E002DB6BF /* Sources */,
+				D31A00332C18058E002DB6BF /* Frameworks */,
+				D31A00342C18058E002DB6BF /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Socks5WidgetExtension;
+			productName = Socks5WidgetExtension;
+			productReference = D31A00152C18058E002DB6BF /* Socks5WidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -110,6 +176,9 @@
 				LastUpgradeCheck = 1520;
 				TargetAttributes = {
 					D30F96592C18058B002DB6BF = {
+						CreatedOnToolsVersion = 15.2;
+					};
+					D31A00312C18058E002DB6BF = {
 						CreatedOnToolsVersion = 15.2;
 					};
 				};
@@ -128,6 +197,7 @@
 			projectRoot = "";
 			targets = (
 				D30F96592C18058B002DB6BF /* Socks5 */,
+				D31A00312C18058E002DB6BF /* Socks5WidgetExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -143,6 +213,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		D31A00342C18058E002DB6BF /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -150,13 +227,42 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D31A00022C18058E002DB6BF /* ServerLiveActivityManager.swift in Sources */,
+				D31A00012C18058E002DB6BF /* Socks5ActivityAttributes.swift in Sources */,
 				D30F96602C18058B002DB6BF /* ContentView.swift in Sources */,
 				D30F965E2C18058B002DB6BF /* Socks5App.swift in Sources */,
 				D30F965E2C18058B002DB6BD /* BackgroundAudioManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		D31A00322C18058E002DB6BF /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D31A00042C18058E002DB6BF /* Socks5ActivityAttributes.swift in Sources */,
+				D31A00032C18058E002DB6BF /* Socks5WidgetExtension.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		D31A00332C18058E002DB6BF /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		D31A00232C18058E002DB6BF /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D31A00312C18058E002DB6BF /* Socks5WidgetExtension */;
+			targetProxy = D31A00212C18058E002DB6BF /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		D30F96662C18058E002DB6BF /* Debug */ = {
@@ -336,6 +442,167 @@
 			};
 			name = Release;
 		};
+		D31A00422C18058E002DB6BF /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.2;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		D31A00432C18058E002DB6BF /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.2;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		D31A00442C18058E002DB6BF /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Socks5WidgetExtension/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = hev.Socks5.WidgetExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		D31A00452C18058E002DB6BF /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Socks5WidgetExtension/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = hev.Socks5.WidgetExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -353,6 +620,24 @@
 			buildConfigurations = (
 				D30F96692C18058E002DB6BF /* Debug */,
 				D30F966A2C18058E002DB6BF /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D31A00412C18058E002DB6BF /* Build configuration list for PBXNativeTarget "Socks5WidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D31A00442C18058E002DB6BF /* Debug */,
+				D31A00452C18058E002DB6BF /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D31A00462C18058E002DB6BF /* Build configuration list for PBXProject "Socks5WidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D31A00422C18058E002DB6BF /* Debug */,
+				D31A00432C18058E002DB6BF /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

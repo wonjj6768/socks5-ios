@@ -10,9 +10,9 @@ final class BackgroundAudioManager {
 
     private var player: AVAudioPlayer?
     private(set) var isPlaying: Bool = false
+    private var shouldKeepAlive: Bool = false
 
     private init() {
-        setupAudioSession()
         setupPlayer()
         setupNotifications()
     }
@@ -83,8 +83,10 @@ final class BackgroundAudioManager {
         case .ended:
             // 인터럽트 종료 — 오디오 세션 복구 후 재생 재개
             print("[BackgroundAudio] Interruption ended, resuming playback")
-            setupAudioSession()
-            player?.play()
+            if shouldKeepAlive {
+                setupAudioSession()
+                player?.play()
+            }
 
         @unknown default:
             break
@@ -101,7 +103,9 @@ final class BackgroundAudioManager {
         // 블루투스 해제, 이어폰 뽑기 등으로 재생이 멈출 수 있음 → 복구
         if reason == .oldDeviceUnavailable {
             print("[BackgroundAudio] Audio route changed, resuming playback")
-            player?.play()
+            if shouldKeepAlive {
+                player?.play()
+            }
         }
     }
 
@@ -109,21 +113,30 @@ final class BackgroundAudioManager {
 
     func start() {
         guard !isPlaying else { return }
+        shouldKeepAlive = true
+        setupAudioSession()
         player?.play()
-        isPlaying = true
+        isPlaying = player?.isPlaying ?? false
     }
 
     func stop() {
+        shouldKeepAlive = false
         player?.stop()
+        do {
+            try AVAudioSession.sharedInstance().setActive(false, options: [.notifyOthersOnDeactivation])
+        } catch {
+            print("[BackgroundAudio] Failed to deactivate audio session: \(error)")
+        }
         isPlaying = false
     }
 
     /// 앱이 다시 포그라운드로 돌아왔을 때 오디오 세션을 복구
     func resume() {
+        guard shouldKeepAlive else { return }
         setupAudioSession()
         if !(player?.isPlaying ?? false) {
             player?.play()
         }
-        isPlaying = true
+        isPlaying = player?.isPlaying ?? false
     }
 }

@@ -18,12 +18,6 @@ jobs:
           ./build-apple.sh
           cp -r HevSocks5Server.xcframework ../
 
-      - name: Patch project.pbxproj (disable codesign)
-        run: |
-          sed -i '' \
-            's/CODE_SIGN_STYLE = Automatic/CODE_SIGN_STYLE = Manual/g' \
-            Socks5.xcodeproj/project.pbxproj
-
       - name: Build (Unsigned)
         run: |
           xcodebuild build \

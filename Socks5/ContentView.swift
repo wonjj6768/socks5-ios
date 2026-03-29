@@ -5,6 +5,7 @@
 
 import SwiftUI
 import HevSocks5Server
+import Network
 
 // MARK: - Network Utility
 
@@ -37,6 +38,8 @@ func getLocalIPAddress() -> String {
 // MARK: - ContentView
 
 struct ContentView: View {
+    @Environment(\.scenePhase) private var scenePhase
+
     @AppStorage("socks5_workers") private var workersText: String = "4"
     @AppStorage("socks5_listenAddr") private var listenAddrText: String = "::"
     @AppStorage("socks5_listenPort") private var listenPortText: String = "1080"
@@ -54,6 +57,7 @@ struct ContentView: View {
     @State private var serverStatus: ServerStatus = .stopped
     @State private var localIP: String = "N/A"
     @State private var showCopied: Bool = false
+    @State private var startupVerificationTask: Task<Void, Never>?
 
     enum ServerStatus {
         case stopped, starting, running, failed
@@ -61,6 +65,41 @@ struct ContentView: View {
 
     var proxyAddress: String {
         "\(localIP):\(listenPortText)"
+    }
+
+    var primaryButtonTitle: String {
+        switch serverStatus {
+        case .running:
+            return "Stop Server"
+        case .starting:
+            return "Starting..."
+        case .stopped, .failed:
+            return "Start Server"
+        }
+    }
+
+    var primaryButtonColor: Color {
+        switch serverStatus {
+        case .running:
+            return .red
+        case .starting:
+            return .orange
+        case .stopped, .failed:
+            return .green
+        }
+    }
+
+    var statusDetailText: String {
+        switch serverStatus {
+        case .stopped:
+            return "The SOCKS5 server is offline."
+        case .starting:
+            return "Launching the server and waiting for the listener to respond."
+        case .running:
+            return "Background keepalive is enabled only while the server is active."
+        case .failed:
+            return "The previous launch ended unexpectedly. Check the settings and try again."
+        }
     }
 
     var statusColor: Color {
@@ -83,78 +122,10 @@ struct ContentView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 12) {
-
-                // MARK: - Status & IP Section
-                VStack(spacing: 8) {
-                    HStack {
-                        Circle()
-                            .fill(statusColor)
-                            .frame(width: 12, height: 12)
-                        Text(statusText)
-                            .font(.headline)
-                            .foregroundColor(statusColor)
-                        Spacer()
-                    }
-
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Proxy Address")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            Text(proxyAddress)
-                                .font(.system(.body, design: .monospaced))
-                                .fontWeight(.medium)
-                        }
-                        Spacer()
-                        Button(action: {
-                            UIPasteboard.general.string = proxyAddress
-                            showCopied = true
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                                showCopied = false
-                            }
-                        }) {
-                            Text(showCopied ? "Copied!" : "Copy")
-                                .font(.caption)
-                                .fontWeight(.semibold)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(showCopied ? Color.green : Color.accentColor)
-                                .foregroundColor(.white)
-                                .cornerRadius(8)
-                        }
-                    }
-                }
-                .padding()
-                .background(Color(.secondarySystemBackground))
-                .cornerRadius(12)
-
-                // MARK: - Controls
-                HStack(spacing: 16) {
-                    Button(action: { startServer() }) {
-                        Text("Start")
-                            .font(.headline)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(isRunning ? Color.gray : Color.green)
-                            .foregroundColor(.white)
-                            .cornerRadius(10)
-                    }
-                    .disabled(isRunning)
-
-                    Button(action: {
-                        hev_socks5_server_quit()
-                    }) {
-                        Text("Stop")
-                            .font(.headline)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(!isRunning ? Color.gray : Color.red)
-                            .foregroundColor(.white)
-                            .cornerRadius(10)
-                    }
-                    .disabled(!isRunning)
-                }
+            VStack(spacing: 16) {
+                statusCard
+                addressCard
+                primaryActionButton
 
                 // MARK: - Auto Start Toggle
                 Toggle(isOn: $autoStart) {
@@ -200,8 +171,17 @@ struct ContentView: View {
         }
         .onAppear {
             localIP = getLocalIPAddress()
+            syncBackgroundAudio(for: serverStatus)
             if autoStart && !isRunning {
                 startServer()
+            }
+        }
+        .onChange(of: serverStatus) { newStatus in
+            syncBackgroundAudio(for: newStatus)
+        }
+        .onChange(of: scenePhase) { newPhase in
+            if newPhase == .active && serverStatus == .running {
+                BackgroundAudioManager.shared.resume()
             }
         }
         .onTapGesture {
@@ -210,6 +190,73 @@ struct ContentView: View {
     }
 
     // MARK: - Helper Views
+
+    var statusCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 10) {
+                Circle()
+                    .fill(statusColor)
+                    .frame(width: 12, height: 12)
+                Text(statusText)
+                    .font(.headline)
+                    .foregroundColor(statusColor)
+                Spacer()
+            }
+
+            Text(statusDetailText)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+        .background(Color(.secondarySystemBackground))
+        .cornerRadius(16)
+    }
+
+    var addressCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Proxy Address")
+                .font(.caption)
+                .foregroundColor(.secondary)
+
+            Text(proxyAddress)
+                .font(.system(.title3, design: .monospaced))
+                .fontWeight(.semibold)
+                .textSelection(.enabled)
+
+            Button(action: copyProxyAddress) {
+                Text(showCopied ? "Copied Address" : "Copy Address")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(showCopied ? Color.green : Color.accentColor)
+                    .foregroundColor(.white)
+                    .cornerRadius(12)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+        .background(Color(.secondarySystemBackground))
+        .cornerRadius(16)
+    }
+
+    var primaryActionButton: some View {
+        Button(action: toggleServer) {
+            HStack {
+                Image(systemName: serverStatus == .running ? "stop.fill" : "play.fill")
+                Text(primaryButtonTitle)
+                    .fontWeight(.bold)
+            }
+            .font(.title3)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 18)
+            .background(primaryButtonColor)
+            .foregroundColor(.white)
+            .cornerRadius(16)
+        }
+        .disabled(serverStatus == .starting)
+    }
 
     @ViewBuilder
     func settingsField(_ label: String, text: Binding<String>, placeholder: String = "", keyboard: UIKeyboardType = .default) -> some View {
@@ -225,12 +272,30 @@ struct ContentView: View {
         }
     }
 
+    func copyProxyAddress() {
+        UIPasteboard.general.string = proxyAddress
+        showCopied = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            showCopied = false
+        }
+    }
+
+    func toggleServer() {
+        if isRunning {
+            stopServer()
+        } else {
+            startServer()
+        }
+    }
+
     // MARK: - Server Control
 
     func startServer() {
+        guard !isRunning else { return }
         isRunning = true
         serverStatus = .starting
         localIP = getLocalIPAddress()
+        startupVerificationTask?.cancel()
 
         DispatchQueue.global().async {
             let conf = """
@@ -249,19 +314,116 @@ struct ContentView: View {
                   password: '\(authPassText)'
                 """
 
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                if isRunning {
-                    serverStatus = .running
-                }
+            DispatchQueue.main.async {
+                beginStartupVerification()
             }
 
             let result = hev_socks5_server_main_from_str(conf, UInt32(strlen(conf)))
 
             DispatchQueue.main.async {
+                startupVerificationTask?.cancel()
+                startupVerificationTask = nil
                 isRunning = false
                 serverStatus = result == 0 ? .stopped : .failed
             }
         }
+    }
+
+    func stopServer() {
+        guard isRunning else { return }
+        startupVerificationTask?.cancel()
+        startupVerificationTask = nil
+        hev_socks5_server_quit()
+    }
+
+    func beginStartupVerification() {
+        startupVerificationTask?.cancel()
+        startupVerificationTask = Task {
+            for _ in 0..<20 {
+                if Task.isCancelled || !isRunning || serverStatus != .starting {
+                    return
+                }
+
+                if await isServerReachable() {
+                    guard !Task.isCancelled, isRunning, serverStatus == .starting else { return }
+                    serverStatus = .running
+                    return
+                }
+
+                try? await Task.sleep(nanoseconds: 250_000_000)
+            }
+        }
+    }
+
+    func isServerReachable() async -> Bool {
+        guard let portValue = UInt16(listenPortText), let port = NWEndpoint.Port(rawValue: portValue) else {
+            return false
+        }
+
+        let host = probeHost()
+        let connection = NWConnection(host: host, port: port, using: .tcp)
+
+        return await withCheckedContinuation { continuation in
+            let queue = DispatchQueue(label: "Socks5.StartupProbe")
+            var resolved = false
+
+            func finish(_ value: Bool) {
+                guard !resolved else { return }
+                resolved = true
+                connection.cancel()
+                continuation.resume(returning: value)
+            }
+
+            connection.stateUpdateHandler = { state in
+                switch state {
+                case .ready:
+                    finish(true)
+                case .failed, .cancelled:
+                    finish(false)
+                default:
+                    break
+                }
+            }
+
+            connection.start(queue: queue)
+
+            queue.asyncAfter(deadline: .now() + 0.2) {
+                finish(false)
+            }
+        }
+    }
+
+    func probeHost() -> NWEndpoint.Host {
+        if listenAddrText == "::1" {
+            return "::1"
+        }
+
+        if listenAddrText == "127.0.0.1" || listenAddrText == "localhost" {
+            return "127.0.0.1"
+        }
+
+        if listenAddrText.contains(":") && listenIpv6OnlyToggle {
+            return "::1"
+        }
+
+        return "127.0.0.1"
+    }
+
+    func syncBackgroundAudio(for status: ServerStatus) {
+        switch status {
+        case .running:
+            BackgroundAudioManager.shared.start()
+        case .stopped, .failed:
+            BackgroundAudioManager.shared.stop()
+        case .starting:
+            break
+        }
+
+        ServerLiveActivityManager.shared.sync(
+            isRunning: status == .running,
+            statusText: statusText,
+            proxyAddress: proxyAddress
+        )
     }
 }
 
