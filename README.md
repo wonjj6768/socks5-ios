@@ -17,6 +17,7 @@ A simple and lightweight socks5 server for iOS.
 ```bash
 git clone --recursive https://github.com/heiher/hev-socks5-server
 cd hev-socks5-server
+git apply ../patches/hev-socks5-server-udp-associate-port0.patch
 ./build-apple.sh
 ```
 

@@ -15,6 +15,7 @@ jobs:
         run: |
           git clone --recursive https://github.com/heiher/hev-socks5-server
           cd hev-socks5-server
+          git apply ../patches/hev-socks5-server-udp-associate-port0.patch
           ./build-apple.sh
           cp -r HevSocks5Server.xcframework ../
 
@@ -47,4 +48,11 @@ jobs:
         with:
           name: Socks5-IPA-Unsigned
           path: build/ipa/Socks5-unsigned.ipa
+          retention-days: 7
+
+      - name: Upload patched xcframework
+        uses: actions/upload-artifact@v4
+        with:
+          name: HevSocks5Server-xcframework-patched
+          path: HevSocks5Server.xcframework
           retention-days: 7
