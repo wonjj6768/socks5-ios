@@ -90,6 +90,9 @@ jobs:
           assert off and data[off:] == payload, data.hex()
           tcp.close()
           PY
+          kill $SERVER_PID || true
+          trap - EXIT
+          make clean
           ./build-apple.sh
           cp -r HevSocks5Server.xcframework ../
 
