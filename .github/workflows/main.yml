@@ -16,6 +16,80 @@ jobs:
           git clone --recursive https://github.com/heiher/hev-socks5-server
           cd hev-socks5-server
           git apply ../patches/hev-socks5-server-udp-associate-port0.patch
+          make exec
+          cat > /tmp/hev-socks5-smoke.yml <<'EOF'
+          main:
+            workers: 1
+            port: 18888
+            listen-address: '127.0.0.1'
+            udp-port: 18888
+            udp-listen-address: '127.0.0.1'
+            listen-ipv6-only: false
+            bind-address-v4: '0.0.0.0'
+            bind-address-v6: '::'
+            bind-interface: ''
+          misc:
+            log-level: debug
+            log-file: stderr
+            udp-read-write-timeout: 10000
+          EOF
+          ./bin/hev-socks5-server /tmp/hev-socks5-smoke.yml &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID || true' EXIT
+          python3 - <<'PY'
+          import os, socket, struct, threading, time
+
+          proxy = ("127.0.0.1", 18888)
+          echo = ("127.0.0.1", 19999)
+
+          def echo_server():
+              s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+              s.bind(echo)
+              while True:
+                  data, addr = s.recvfrom(2048)
+                  s.sendto(data, addr)
+
+          threading.Thread(target=echo_server, daemon=True).start()
+
+          def read_exact(sock, n):
+              data = b""
+              while len(data) < n:
+                  chunk = sock.recv(n - len(data))
+                  if not chunk:
+                      raise RuntimeError("tcp closed")
+                  data += chunk
+              return data
+
+          def associate():
+              tcp = socket.create_connection(proxy, timeout=5)
+              tcp.sendall(b"\\x05\\x01\\x00")
+              assert read_exact(tcp, 2) == b"\\x05\\x00"
+              tcp.sendall(b"\\x05\\x03\\x00\\x01\\x00\\x00\\x00\\x00\\x00\\x00")
+              head = read_exact(tcp, 4)
+              assert head[:3] == b"\\x05\\x00\\x00", head.hex()
+              assert head[3] == 1, head.hex()
+              tail = read_exact(tcp, 6)
+              return tcp, (".".join(map(str, tail[:4])), struct.unpack("!H", tail[4:])[0])
+
+          for _ in range(40):
+              try:
+                  tcp, udp_relay = associate()
+                  break
+              except Exception:
+                  time.sleep(0.25)
+          else:
+              raise RuntimeError("server did not start")
+
+          udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+          udp.settimeout(5)
+          payload = os.urandom(32)
+          req = b"\\x00\\x00\\x00\\x01" + socket.inet_aton(echo[0]) + struct.pack("!H", echo[1]) + payload
+          udp.sendto(req, udp_relay)
+          data, _ = udp.recvfrom(2048)
+          off = 10 if data[3] == 1 else None
+          assert off and data[off:] == payload, data.hex()
+          tcp.close()
+          PY
           ./build-apple.sh
           cp -r HevSocks5Server.xcframework ../
 
