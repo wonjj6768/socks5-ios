@@ -62,11 +62,11 @@ jobs:
 
           def associate():
               tcp = socket.create_connection(proxy, timeout=5)
-              tcp.sendall(b"\\x05\\x01\\x00")
-              assert read_exact(tcp, 2) == b"\\x05\\x00"
-              tcp.sendall(b"\\x05\\x03\\x00\\x01\\x00\\x00\\x00\\x00\\x00\\x00")
+              tcp.sendall(b"\x05\x01\x00")
+              assert read_exact(tcp, 2) == b"\x05\x00"
+              tcp.sendall(b"\x05\x03\x00\x01\x00\x00\x00\x00\x00\x00")
               head = read_exact(tcp, 4)
-              assert head[:3] == b"\\x05\\x00\\x00", head.hex()
+              assert head[:3] == b"\x05\x00\x00", head.hex()
               assert head[3] == 1, head.hex()
               tail = read_exact(tcp, 6)
               return tcp, (".".join(map(str, tail[:4])), struct.unpack("!H", tail[4:])[0])
@@ -83,7 +83,7 @@ jobs:
           udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
           udp.settimeout(5)
           payload = os.urandom(32)
-          req = b"\\x00\\x00\\x00\\x01" + socket.inet_aton(echo[0]) + struct.pack("!H", echo[1]) + payload
+          req = b"\x00\x00\x00\x01" + socket.inet_aton(echo[0]) + struct.pack("!H", echo[1]) + payload
           udp.sendto(req, udp_relay)
           data, _ = udp.recvfrom(2048)
           off = 10 if data[3] == 1 else None
