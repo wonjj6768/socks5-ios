@@ -169,10 +169,10 @@ index c3f9ed8..fc6d82d 100644
  struct _HevSocks5SessionClass
 diff --git a/src/hev-socks5-udp-dispatcher.c b/src/hev-socks5-udp-dispatcher.c
 new file mode 100644
-index 0000000..46d90d7
+index 0000000..9696032
 --- /dev/null
 +++ b/src/hev-socks5-udp-dispatcher.c
-@@ -0,0 +1,496 @@
+@@ -0,0 +1,558 @@
 +/*
 + ============================================================================
 + Name        : hev-socks5-udp-dispatcher.c
@@ -216,6 +216,7 @@ index 0000000..46d90d7
 +static HevList session_list;
 +static HevTask *dispatcher_task;
 +static int dispatcher_fd = -1;
++static int dispatcher_family = AF_INET6;
 +static struct sockaddr_in6 dispatcher_addr;
 +
 +static int
@@ -229,6 +230,28 @@ index 0000000..46d90d7
 +                     const struct sockaddr_in6 *b)
 +{
 +    return (a->sin6_port == b->sin6_port) && addr_ip_equal (a, b);
++}
++
++static void
++sockaddr4_into_sockaddr6 (const struct sockaddr_in *src,
++                          struct sockaddr_in6 *dst)
++{
++    memset (dst, 0, sizeof (*dst));
++    dst->sin6_family = AF_INET6;
++    dst->sin6_port = src->sin_port;
++    dst->sin6_addr.s6_addr[10] = 0xff;
++    dst->sin6_addr.s6_addr[11] = 0xff;
++    memcpy (&dst->sin6_addr.s6_addr[12], &src->sin_addr, 4);
++}
++
++static void
++sockaddr6_into_sockaddr4 (const struct sockaddr_in6 *src,
++                          struct sockaddr_in *dst)
++{
++    memset (dst, 0, sizeof (*dst));
++    dst->sin_family = AF_INET;
++    dst->sin_port = src->sin6_port;
++    memcpy (&dst->sin_addr, &src->sin6_addr.s6_addr[12], 4);
 +}
 +
 +static void
@@ -339,13 +362,19 @@ index 0000000..46d90d7
 +
 +    for (;;) {
 +        struct sockaddr_in6 client;
-+        socklen_t alen = sizeof (client);
++        struct sockaddr_in client4;
++        struct sockaddr *sap;
++        socklen_t alen;
 +        char buf[UDP_BUF_SIZE];
 +        ssize_t len;
 +
++        sap = (dispatcher_family == AF_INET) ? (struct sockaddr *)&client4 :
++                                               (struct sockaddr *)&client;
++        alen = (dispatcher_family == AF_INET) ? sizeof (client4) :
++                                                sizeof (client);
 +        len = hev_task_io_socket_recvfrom (
 +            dispatcher_fd, buf, sizeof (buf), MSG_DONTWAIT,
-+            (struct sockaddr *)&client, &alen, NULL, NULL);
++            sap, &alen, NULL, NULL);
 +        if (len <= 0) {
 +            hev_task_yield (HEV_TASK_WAITIO);
 +            continue;
@@ -354,6 +383,9 @@ index 0000000..46d90d7
 +        for (;;) {
 +            HevSocks5Session *session;
 +            UdpPacket *packet;
++
++            if (dispatcher_family == AF_INET)
++                sockaddr4_into_sockaddr6 (&client4, &client);
 +
 +            session = lookup_session (&client);
 +            if (session) {
@@ -366,10 +398,13 @@ index 0000000..46d90d7
 +                }
 +            }
 +
-+            alen = sizeof (client);
++            sap = (dispatcher_family == AF_INET) ? (struct sockaddr *)&client4 :
++                                                   (struct sockaddr *)&client;
++            alen = (dispatcher_family == AF_INET) ? sizeof (client4) :
++                                                    sizeof (client);
 +            len = hev_task_io_socket_recvfrom (
 +                dispatcher_fd, buf, sizeof (buf), MSG_DONTWAIT,
-+                (struct sockaddr *)&client, &alen, NULL, NULL);
++                sap, &alen, NULL, NULL);
 +            if (len <= 0)
 +                break;
 +        }
@@ -388,14 +423,31 @@ index 0000000..46d90d7
 +    int one = 1;
 +    int res;
 +
-+    dispatcher_fd = hev_task_io_socket_socket (AF_INET6, SOCK_DGRAM, 0);
++    saddr = hev_config_get_udp_listen_address ();
++    alen = sizeof (addr);
++    if (saddr)
++        res = hev_netaddr_resolve (&addr, saddr, NULL);
++    else
++        res = getsockname (HEV_SOCKS5 (session)->fd, (struct sockaddr *)&addr,
++                           &alen);
++    if (res < 0)
++        goto exit;
++
++    sport = hev_config_get_udp_listen_port ();
++    addr.sin6_port = htons (sport);
++    dispatcher_family = IN6_IS_ADDR_V4MAPPED (&addr.sin6_addr) ? AF_INET :
++                                                               AF_INET6;
++    dispatcher_fd = hev_task_io_socket_socket (dispatcher_family, SOCK_DGRAM,
++                                              0);
 +    if (dispatcher_fd < 0)
 +        return -1;
 +
-+    res = setsockopt (dispatcher_fd, IPPROTO_IPV6, IPV6_V6ONLY, &zero,
-+                      sizeof (zero));
-+    if (res < 0)
-+        goto exit;
++    if (dispatcher_family == AF_INET6) {
++        res = setsockopt (dispatcher_fd, IPPROTO_IPV6, IPV6_V6ONLY, &zero,
++                          sizeof (zero));
++        if (res < 0)
++            goto exit;
++    }
 +
 +    res = setsockopt (dispatcher_fd, SOL_SOCKET, SO_REUSEADDR, &one,
 +                      sizeof (one));
@@ -410,32 +462,35 @@ index 0000000..46d90d7
 +#endif
 +
 +    ipv6_only = hev_config_get_listen_ipv6_only ();
-+    if (ipv6_only) {
++    if ((dispatcher_family == AF_INET6) && ipv6_only) {
 +        res = setsockopt (dispatcher_fd, IPPROTO_IPV6, IPV6_V6ONLY, &one,
 +                          sizeof (one));
 +        if (res < 0)
 +            goto exit;
 +    }
 +
-+    saddr = hev_config_get_udp_listen_address ();
-+    alen = sizeof (addr);
-+    if (saddr)
-+        res = hev_netaddr_resolve (&addr, saddr, NULL);
-+    else
-+        res = getsockname (HEV_SOCKS5 (session)->fd, (struct sockaddr *)&addr,
++    if (dispatcher_family == AF_INET) {
++        struct sockaddr_in addr4;
++
++        sockaddr6_into_sockaddr4 (&addr, &addr4);
++        res = bind (dispatcher_fd, (struct sockaddr *)&addr4, sizeof (addr4));
++    } else {
++        res = bind (dispatcher_fd, (struct sockaddr *)&addr, sizeof (addr));
++    }
++    if (res < 0)
++        goto exit;
++
++    if (dispatcher_family == AF_INET) {
++        struct sockaddr_in addr4;
++
++        alen = sizeof (addr4);
++        res = getsockname (dispatcher_fd, (struct sockaddr *)&addr4, &alen);
++        sockaddr4_into_sockaddr6 (&addr4, &dispatcher_addr);
++    } else {
++        alen = sizeof (dispatcher_addr);
++        res = getsockname (dispatcher_fd, (struct sockaddr *)&dispatcher_addr,
 +                           &alen);
-+    if (res < 0)
-+        goto exit;
-+
-+    sport = hev_config_get_udp_listen_port ();
-+    addr.sin6_port = htons (sport);
-+    res = bind (dispatcher_fd, (struct sockaddr *)&addr, sizeof (addr));
-+    if (res < 0)
-+        goto exit;
-+
-+    alen = sizeof (dispatcher_addr);
-+    res = getsockname (dispatcher_fd, (struct sockaddr *)&dispatcher_addr,
-+                       &alen);
++    }
 +    if (res < 0)
 +        goto exit;
 +
@@ -578,6 +633,7 @@ index 0000000..46d90d7
 +    HevSocks5UDPHdr udp;
 +    struct iovec iov[3];
 +    struct msghdr mh;
++    struct sockaddr_in client4;
 +    char abuf[19];
 +    ssize_t res;
 +    int alen;
@@ -598,8 +654,14 @@ index 0000000..46d90d7
 +    iov[2].iov_base = (void *)buf;
 +    iov[2].iov_len = len;
 +
-+    mh.msg_name = &session->udp_client;
-+    mh.msg_namelen = sizeof (session->udp_client);
++    if (dispatcher_family == AF_INET) {
++        sockaddr6_into_sockaddr4 (&session->udp_client, &client4);
++        mh.msg_name = &client4;
++        mh.msg_namelen = sizeof (client4);
++    } else {
++        mh.msg_name = &session->udp_client;
++        mh.msg_namelen = sizeof (session->udp_client);
++    }
 +    mh.msg_control = NULL;
 +    mh.msg_controllen = 0;
 +    mh.msg_iov = iov;
