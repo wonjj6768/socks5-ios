@@ -154,10 +154,10 @@ index c3f9ed8..fc6d82d 100644
  struct _HevSocks5SessionClass
 diff --git a/src/hev-socks5-udp-dispatcher.c b/src/hev-socks5-udp-dispatcher.c
 new file mode 100644
-index 0000000..f240a5b
+index 0000000..46d90d7
 --- /dev/null
 +++ b/src/hev-socks5-udp-dispatcher.c
-@@ -0,0 +1,487 @@
+@@ -0,0 +1,496 @@
 +/*
 + ============================================================================
 + Name        : hev-socks5-udp-dispatcher.c
@@ -387,6 +387,13 @@ index 0000000..f240a5b
 +    if (res < 0)
 +        goto exit;
 +
++#ifdef SO_REUSEPORT
++    res = setsockopt (dispatcher_fd, SOL_SOCKET, SO_REUSEPORT, &one,
++                      sizeof (one));
++    if (res < 0)
++        goto exit;
++#endif
++
 +    ipv6_only = hev_config_get_listen_ipv6_only ();
 +    if (ipv6_only) {
 +        res = setsockopt (dispatcher_fd, IPPROTO_IPV6, IPV6_V6ONLY, &one,
@@ -459,6 +466,8 @@ index 0000000..f240a5b
 +    struct sockaddr_in6 peer;
 +    socklen_t alen;
 +    int res;
++
++    (void)sock;
 +
 +    if (!hev_config_get_udp_listen_port_single ())
 +        return 0;
