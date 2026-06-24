@@ -7,8 +7,31 @@ A simple and lightweight socks5 server for iOS.
 * IPv4/IPv6. (dual stack)
 * Standard `CONNECT` command.
 * Standard `UDP ASSOCIATE` command.
+* Fixed-port SOCKS5 UDP relay for clients that expect one UDP port.
 * Extended `FWD UDP` command. (UDP in TCP)
 * Multiple username/password authentication.
+
+## ProxiFyre UDP Notes
+
+This repository builds `hev-socks5-server` with
+`patches/hev-socks5-server-udp-associate-port0.patch`.
+
+The patch is intended for iPhone hotspot / ProxiFyre usage where the SOCKS5
+server listens on TCP/UDP `8888` and ProxiFyre sends `UDP ASSOCIATE
+0.0.0.0:0`.
+
+Supported and tested:
+
+* TCP `CONNECT`.
+* SOCKS5 `UDP ASSOCIATE 0.0.0.0:0`.
+* DNS over UDP.
+* STUN / VoIP-style UDP.
+* UDP/443 QUIC-style datagrams.
+* Multiple concurrent zero-port UDP associations.
+* Remote replies from a different UDP source port.
+
+The GitHub Actions build runs a local SOCKS5 UDP smoke test before packaging
+the unsigned IPA.
 
 ## How to Build
 
