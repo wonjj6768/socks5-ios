@@ -9,6 +9,7 @@ iPhone hotspot.
 * Standard `CONNECT` command.
 * Standard `UDP ASSOCIATE` command.
 * Fixed-port SOCKS5 UDP relay for clients that expect one UDP port.
+* Live traffic counters in the app and Dynamic Island.
 * Extended `FWD UDP` command. (UDP in TCP)
 * Multiple username/password authentication.
 
@@ -33,6 +34,11 @@ Supported and tested:
 
 The GitHub Actions build runs a local SOCKS5 UDP smoke test before packaging
 the unsigned IPA.
+
+## Traffic Monitor
+
+The app shows 1-second TCP/UDP upload and download rates plus total relayed
+bytes. The same counters are also shown in the Live Activity / Dynamic Island.
 
 ## Build
 

@@ -101,9 +101,16 @@ struct Socks5LiveActivityWidget: Widget {
             } compactLeading: {
                 Image(systemName: "network")
             } compactTrailing: {
-                Text(context.state.downloadRateText.replacingOccurrences(of: "/s", with: ""))
-                    .font(.caption2.monospacedDigit())
-                    .foregroundStyle(context.state.isRunning ? .green : .gray)
+                if context.state.isRunning {
+                    Text(context.state.downloadRateText.replacingOccurrences(of: "/s", with: ""))
+                        .font(.caption2.monospacedDigit())
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                        .foregroundStyle(.green)
+                } else {
+                    Image(systemName: "pause.fill")
+                        .foregroundStyle(.gray)
+                }
             } minimal: {
                 Image(systemName: context.state.isRunning ? "network" : "pause")
             }

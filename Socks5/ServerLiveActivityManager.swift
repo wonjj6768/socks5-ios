@@ -6,8 +6,11 @@ final class ServerLiveActivityManager {
     static let shared = ServerLiveActivityManager()
 
     private var activity: Activity<Socks5ActivityAttributes>?
+    private var lastState: Socks5ActivityAttributes.ContentState?
 
-    private init() {}
+    private init() {
+        activity = Activity<Socks5ActivityAttributes>.activities.first
+    }
 
     func sync(isRunning: Bool, statusText: String, proxyAddress: String,
               uploadRateText: String, downloadRateText: String,
@@ -22,6 +25,7 @@ final class ServerLiveActivityManager {
             downloadRateText: downloadRateText,
             totalText: totalText
         )
+        guard state != lastState else { return }
 
         Task {
             if isRunning {
@@ -37,6 +41,7 @@ final class ServerLiveActivityManager {
 
         if let activity {
             await activity.update(content)
+            lastState = state
             return
         }
 
@@ -46,6 +51,7 @@ final class ServerLiveActivityManager {
                 content: content,
                 pushType: nil
             )
+            lastState = state
         } catch {
             print("[LiveActivity] Failed to start activity: \(error)")
         }
@@ -57,5 +63,6 @@ final class ServerLiveActivityManager {
         let content = ActivityContent(state: state, staleDate: Date())
         await activity.end(content, dismissalPolicy: .immediate)
         self.activity = nil
+        lastState = nil
     }
 }
