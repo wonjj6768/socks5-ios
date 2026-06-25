@@ -39,8 +39,10 @@ the unsigned IPA.
 ### HevSocks5Server.xcframework
 
 ```bash
-git clone --recursive https://github.com/heiher/hev-socks5-server
+git clone https://github.com/heiher/hev-socks5-server
 cd hev-socks5-server
+git checkout 52d7e475ef932e93540d1d964e02839f233ad981
+git submodule update --init --recursive
 git apply ../patches/hev-socks5-server-udp-associate-port0.patch
 ./build-apple.sh
 ```
@@ -53,6 +55,7 @@ git apply ../patches/hev-socks5-server-udp-associate-port0.patch
 ## Dependencies
 
 * HevSocks5Server - https://github.com/heiher/hev-socks5-server
+  (`52d7e475ef932e93540d1d964e02839f233ad981`, patched at build time)
 
 ## Contributors
 
