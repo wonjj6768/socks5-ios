@@ -5,6 +5,9 @@ struct Socks5ActivityAttributes: ActivityAttributes {
         var statusText: String
         var proxyAddress: String
         var isRunning: Bool
+        var uploadRateText: String
+        var downloadRateText: String
+        var totalText: String
     }
 
     var title: String

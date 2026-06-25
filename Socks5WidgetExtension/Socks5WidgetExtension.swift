@@ -19,6 +19,15 @@ struct Socks5LiveActivityWidget: Widget {
                     .lineLimit(1)
 
                 HStack {
+                    Label(context.state.uploadRateText, systemImage: "arrow.up")
+                    Label(context.state.downloadRateText, systemImage: "arrow.down")
+                    Spacer()
+                    Text(context.state.totalText)
+                }
+                .font(.caption.monospacedDigit())
+                .foregroundStyle(.secondary)
+
+                HStack {
                     Text("SOCKS5 proxy")
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -62,6 +71,13 @@ struct Socks5LiveActivityWidget: Widget {
                             Text(context.state.proxyAddress)
                                 .font(.system(.footnote, design: .monospaced))
                                 .lineLimit(1)
+                            HStack(spacing: 8) {
+                                Text("↑ \(context.state.uploadRateText)")
+                                Text("↓ \(context.state.downloadRateText)")
+                                Text(context.state.totalText)
+                            }
+                            .font(.caption2.monospacedDigit())
+                            .foregroundStyle(.secondary)
                         }
 
                         Spacer(minLength: 8)
@@ -85,7 +101,8 @@ struct Socks5LiveActivityWidget: Widget {
             } compactLeading: {
                 Image(systemName: "network")
             } compactTrailing: {
-                Image(systemName: context.state.isRunning ? "play.fill" : "pause.fill")
+                Text(context.state.downloadRateText.replacingOccurrences(of: "/s", with: ""))
+                    .font(.caption2.monospacedDigit())
                     .foregroundStyle(context.state.isRunning ? .green : .gray)
             } minimal: {
                 Image(systemName: context.state.isRunning ? "network" : "pause")

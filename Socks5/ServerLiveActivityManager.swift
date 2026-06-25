@@ -9,13 +9,18 @@ final class ServerLiveActivityManager {
 
     private init() {}
 
-    func sync(isRunning: Bool, statusText: String, proxyAddress: String) {
+    func sync(isRunning: Bool, statusText: String, proxyAddress: String,
+              uploadRateText: String, downloadRateText: String,
+              totalText: String) {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
 
         let state = Socks5ActivityAttributes.ContentState(
             statusText: statusText,
             proxyAddress: proxyAddress,
-            isRunning: isRunning
+            isRunning: isRunning,
+            uploadRateText: uploadRateText,
+            downloadRateText: downloadRateText,
+            totalText: totalText
         )
 
         Task {

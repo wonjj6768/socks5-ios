@@ -58,9 +58,25 @@ struct ContentView: View {
     @State private var localIP: String = "N/A"
     @State private var showCopied: Bool = false
     @State private var startupVerificationTask: Task<Void, Never>?
+    @State private var traffic = TrafficDisplay.zero
+    @State private var lastUploadBytes: UInt64 = 0
+    @State private var lastDownloadBytes: UInt64 = 0
+    @State private var lastTrafficDate = Date()
 
     enum ServerStatus {
         case stopped, starting, running, failed
+    }
+
+    struct TrafficDisplay {
+        var uploadRateText: String
+        var downloadRateText: String
+        var totalText: String
+
+        static let zero = TrafficDisplay(
+            uploadRateText: "0 B/s",
+            downloadRateText: "0 B/s",
+            totalText: "0 B"
+        )
     }
 
     var proxyAddress: String {
@@ -184,6 +200,9 @@ struct ContentView: View {
                 BackgroundAudioManager.shared.resume()
             }
         }
+        .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { _ in
+            refreshTrafficStats()
+        }
         .onOpenURL { url in
             handleDeepLink(url)
         }
@@ -209,6 +228,17 @@ struct ContentView: View {
             Text(statusDetailText)
                 .font(.subheadline)
                 .foregroundColor(.secondary)
+
+            if serverStatus == .running {
+                HStack(spacing: 12) {
+                    Label(traffic.uploadRateText, systemImage: "arrow.up")
+                    Label(traffic.downloadRateText, systemImage: "arrow.down")
+                    Spacer()
+                    Text(traffic.totalText)
+                }
+                .font(.caption.monospacedDigit())
+                .foregroundColor(.secondary)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
@@ -308,6 +338,11 @@ struct ContentView: View {
 
     func startServer() {
         guard !isRunning else { return }
+        hev_socks5_server_reset_traffic_stats()
+        traffic = .zero
+        lastUploadBytes = 0
+        lastDownloadBytes = 0
+        lastTrafficDate = Date()
         isRunning = true
         serverStatus = .starting
         localIP = getLocalIPAddress()
@@ -425,6 +460,45 @@ struct ContentView: View {
         return "127.0.0.1"
     }
 
+    func refreshTrafficStats() {
+        guard serverStatus == .running else { return }
+
+        var tcpUpload: UInt64 = 0
+        var tcpDownload: UInt64 = 0
+        var udpUpload: UInt64 = 0
+        var udpDownload: UInt64 = 0
+        hev_socks5_server_get_traffic_stats(
+            &tcpUpload,
+            &tcpDownload,
+            &udpUpload,
+            &udpDownload
+        )
+
+        let upload = tcpUpload + udpUpload
+        let download = tcpDownload + udpDownload
+        let now = Date()
+        let seconds = max(now.timeIntervalSince(lastTrafficDate), 0.001)
+        let uploadDelta = upload >= lastUploadBytes ? upload - lastUploadBytes : 0
+        let downloadDelta = download >= lastDownloadBytes ? download - lastDownloadBytes : 0
+        let uploadRate = UInt64(Double(uploadDelta) / seconds)
+        let downloadRate = UInt64(Double(downloadDelta) / seconds)
+
+        traffic = TrafficDisplay(
+            uploadRateText: "\(formatBytes(uploadRate))/s",
+            downloadRateText: "\(formatBytes(downloadRate))/s",
+            totalText: formatBytes(upload + download)
+        )
+        lastUploadBytes = upload
+        lastDownloadBytes = download
+        lastTrafficDate = now
+        syncLiveActivity()
+    }
+
+    func formatBytes(_ bytes: UInt64) -> String {
+        let value = min(bytes, UInt64(Int64.max))
+        return ByteCountFormatter.string(fromByteCount: Int64(value), countStyle: .binary)
+    }
+
     func syncBackgroundAudio(for status: ServerStatus) {
         switch status {
         case .running:
@@ -435,10 +509,17 @@ struct ContentView: View {
             break
         }
 
+        syncLiveActivity()
+    }
+
+    func syncLiveActivity() {
         ServerLiveActivityManager.shared.sync(
-            isRunning: status == .running,
+            isRunning: serverStatus == .running,
             statusText: statusText,
-            proxyAddress: proxyAddress
+            proxyAddress: proxyAddress,
+            uploadRateText: traffic.uploadRateText,
+            downloadRateText: traffic.downloadRateText,
+            totalText: traffic.totalText
         )
     }
 }
