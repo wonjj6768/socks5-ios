@@ -1,6 +1,7 @@
-# Socks5
+# ProxiFyre iOS SOCKS5 Server
 
-A simple and lightweight socks5 server for iOS.
+An iOS SOCKS5 server build for routing ProxiFyre TCP/UDP traffic through an
+iPhone hotspot.
 
 ## Features
 
@@ -11,14 +12,14 @@ A simple and lightweight socks5 server for iOS.
 * Extended `FWD UDP` command. (UDP in TCP)
 * Multiple username/password authentication.
 
-## ProxiFyre UDP Notes
+## UDP Relay
 
 This repository builds `hev-socks5-server` with
 `patches/hev-socks5-server-udp-associate-port0.patch`.
 
-The patch is intended for iPhone hotspot / ProxiFyre usage where the SOCKS5
-server listens on TCP/UDP `8888` and ProxiFyre sends `UDP ASSOCIATE
-0.0.0.0:0`.
+The patch is intended for a single fixed relay port: TCP/UDP `8888`.
+ProxiFyre can send `UDP ASSOCIATE 0.0.0.0:0`, and the server still replies
+with `BND.PORT = 8888`.
 
 Supported and tested:
 
@@ -33,7 +34,7 @@ Supported and tested:
 The GitHub Actions build runs a local SOCKS5 UDP smoke test before packaging
 the unsigned IPA.
 
-## How to Build
+## Build
 
 ### HevSocks5Server.xcframework
 
@@ -44,7 +45,7 @@ git apply ../patches/hev-socks5-server-udp-associate-port0.patch
 ./build-apple.sh
 ```
 
-### Xcode
+### App
 
 1. Copy HevSocks5Server.xcframework to this project directory.
 2. Build it with Xcode.
