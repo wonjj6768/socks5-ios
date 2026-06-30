@@ -62,6 +62,7 @@ struct ContentView: View {
     @State private var lastUploadBytes: UInt64 = 0
     @State private var lastDownloadBytes: UInt64 = 0
     @State private var lastTrafficDate = Date()
+    @State private var lastLiveActivityDate = Date.distantPast
 
     enum ServerStatus {
         case stopped, starting, running, failed
@@ -343,6 +344,7 @@ struct ContentView: View {
         lastUploadBytes = 0
         lastDownloadBytes = 0
         lastTrafficDate = Date()
+        lastLiveActivityDate = .distantPast
         isRunning = true
         serverStatus = .starting
         localIP = getLocalIPAddress()
@@ -491,7 +493,10 @@ struct ContentView: View {
         lastUploadBytes = upload
         lastDownloadBytes = download
         lastTrafficDate = now
-        syncLiveActivity()
+        if now.timeIntervalSince(lastLiveActivityDate) >= 3 {
+            lastLiveActivityDate = now
+            syncLiveActivity()
+        }
     }
 
     func formatBytes(_ bytes: UInt64) -> String {
