@@ -1,4 +1,5 @@
 import ActivityKit
+import AppIntents
 import SwiftUI
 import WidgetKit
 
@@ -33,15 +34,12 @@ struct Socks5LiveActivityWidget: Widget {
                         .foregroundStyle(.secondary)
                     Spacer()
                     if context.state.isRunning {
-                        Link(destination: URL(string: "socks5://stop")!) {
+                        Button(intent: StopServerIntent()) {
                             Label("Stop", systemImage: "stop.fill")
                                 .font(.caption.weight(.semibold))
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
-                                .background(Color.red.opacity(0.14))
-                                .foregroundStyle(.red)
-                                .clipShape(Capsule())
                         }
+                        .buttonStyle(.plain)
+                        .tint(.red)
                     }
                 }
             }
@@ -83,15 +81,12 @@ struct Socks5LiveActivityWidget: Widget {
                         Spacer(minLength: 8)
 
                         if context.state.isRunning {
-                            Link(destination: URL(string: "socks5://stop")!) {
+                            Button(intent: StopServerIntent()) {
                                 Label("Stop", systemImage: "stop.fill")
                                     .font(.caption.weight(.semibold))
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 7)
-                                    .background(Color.red.opacity(0.16))
-                                    .foregroundStyle(.red)
-                                    .clipShape(Capsule())
                             }
+                            .buttonStyle(.plain)
+                            .tint(.red)
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)

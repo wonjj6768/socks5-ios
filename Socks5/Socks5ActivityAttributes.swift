@@ -1,4 +1,6 @@
 import ActivityKit
+import AppIntents
+import Foundation
 
 struct Socks5ActivityAttributes: ActivityAttributes {
     public struct ContentState: Codable, Hashable {
@@ -11,4 +13,20 @@ struct Socks5ActivityAttributes: ActivityAttributes {
     }
 
     var title: String
+}
+
+extension Notification.Name {
+    static let socks5StopRequested = Notification.Name("Socks5.StopRequested")
+}
+
+/// Runs in the app process, so the Live Activity can stop the server without
+/// bringing the app to the foreground.
+struct StopServerIntent: LiveActivityIntent {
+    static var title: LocalizedStringResource = "Stop Server"
+    static var openAppWhenRun: Bool = false
+
+    func perform() async throws -> some IntentResult {
+        NotificationCenter.default.post(name: .socks5StopRequested, object: nil)
+        return .result()
+    }
 }
