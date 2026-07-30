@@ -26,23 +26,18 @@ index 7a5d04d..122508a 100644
 +int hev_config_get_udp_listen_port_single (void);
  const char *hev_config_get_udp_public_address (int family);
 diff --git a/src/hev-main.c b/src/hev-main.c
-index 9501602..c781829 100644
+index 9501602..24b7084 100644
 --- a/src/hev-main.c
 +++ b/src/hev-main.c
-@@ -22,2 +22,4 @@
+@@ -22,2 +22,3 @@
  #include "hev-socks5-proxy.h"
 +#include "hev-traffic-stats.h"
-+#include "hev-socks5-udp-dispatcher.h"
  
-@@ -55,2 +57,4 @@ hev_socks5_server_main_inner (void)
+@@ -55,2 +56,4 @@ hev_socks5_server_main_inner (void)
  
 +    hev_socks5_traffic_stats_reset ();
 +
      log_file = hev_config_get_misc_log_file ();
-@@ -131,2 +135,3 @@ hev_socks5_server_quit (void)
- {
-+    hev_socks5_udp_dispatcher_stop ();
-     hev_socks5_proxy_stop ();
 diff --git a/src/hev-main.h b/src/hev-main.h
 index 37a3c8c..7c824bb 100644
 --- a/src/hev-main.h
@@ -58,6 +53,19 @@ index 37a3c8c..7c824bb 100644
 +void hev_socks5_server_reset_traffic_stats (void);
 +
  #ifdef __cplusplus
+diff --git a/src/hev-socks5-proxy.c b/src/hev-socks5-proxy.c
+index 16a52ed..e22490f 100644
+--- a/src/hev-socks5-proxy.c
++++ b/src/hev-socks5-proxy.c
+@@ -26,2 +26,3 @@
+ #include "hev-socks5-user-mark.h"
++#include "hev-socks5-udp-dispatcher.h"
+ 
+@@ -305,2 +306,4 @@ hev_socks5_proxy_stop (void)
+ 
++    hev_socks5_udp_dispatcher_stop ();
++
+     for (i = 0; i < workers; i++) {
 diff --git a/src/hev-socks5-session.c b/src/hev-socks5-session.c
 index 6252f63..85cd1d3 100644
 --- a/src/hev-socks5-session.c
