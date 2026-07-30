@@ -6,33 +6,55 @@
 import SwiftUI
 import HevSocks5Server
 import Network
+import Combine
 
 // MARK: - Network Utility
 
-func getLocalIPAddress() -> String {
-    var address = "N/A"
+struct NetworkAddress: Identifiable, Equatable {
+    let interface: String
+    let address: String
+
+    var id: String { interface }
+}
+
+/// Reachable IPv4 addresses, personal hotspot first.
+///
+/// `bridge100` is the interface iOS creates while Personal Hotspot is on, and
+/// it carries the address that tethered clients actually connect to.
+func localIPAddresses() -> [NetworkAddress] {
+    var found: [NetworkAddress] = []
     var ifaddr: UnsafeMutablePointer<ifaddrs>?
-    guard getifaddrs(&ifaddr) == 0, let firstAddr = ifaddr else { return address }
+    guard getifaddrs(&ifaddr) == 0, let firstAddr = ifaddr else { return found }
     defer { freeifaddrs(ifaddr) }
 
     for ptr in sequence(first: firstAddr, next: { $0.pointee.ifa_next }) {
-        let sa = ptr.pointee.ifa_addr.pointee
-        guard sa.sa_family == UInt8(AF_INET) else { continue }
+        guard let ifaAddr = ptr.pointee.ifa_addr else { continue }
+        guard ifaAddr.pointee.sa_family == UInt8(AF_INET) else { continue }
+        guard ptr.pointee.ifa_flags & UInt32(IFF_UP) != 0,
+              ptr.pointee.ifa_flags & UInt32(IFF_LOOPBACK) == 0 else { continue }
+
         let name = String(cString: ptr.pointee.ifa_name)
-        guard name == "en0" else { continue }
-        var addr = ptr.pointee.ifa_addr.pointee
+        guard name.hasPrefix("en") || name.hasPrefix("bridge")
+                || name.hasPrefix("pdp_ip") else { continue }
+
         var hostname = [CChar](repeating: 0, count: Int(NI_MAXHOST))
-        withUnsafePointer(to: &addr) { addrPtr in
-            addrPtr.withMemoryRebound(to: sockaddr.self, capacity: 1) { sa in
-                getnameinfo(sa, socklen_t(sa.pointee.sa_len),
-                            &hostname, socklen_t(hostname.count),
-                            nil, 0, NI_NUMERICHOST)
-            }
-        }
-        address = String(cString: hostname)
-        break
+        let res = getnameinfo(ifaAddr, socklen_t(ifaAddr.pointee.sa_len),
+                              &hostname, socklen_t(hostname.count),
+                              nil, 0, NI_NUMERICHOST)
+        guard res == 0 else { continue }
+
+        found.append(NetworkAddress(interface: name,
+                                    address: String(cString: hostname)))
     }
-    return address
+
+    func rank(_ name: String) -> Int {
+        if name.hasPrefix("bridge") { return 0 }
+        if name == "en0" { return 1 }
+        if name.hasPrefix("en") { return 2 }
+        return 3
+    }
+
+    return found.sorted { rank($0.interface) < rank($1.interface) }
 }
 
 // MARK: - ContentView
@@ -55,8 +77,9 @@ struct ContentView: View {
 
     @State private var isRunning: Bool = false
     @State private var serverStatus: ServerStatus = .stopped
-    @State private var localIP: String = "N/A"
-    @State private var showCopied: Bool = false
+    @State private var addresses: [NetworkAddress] = []
+    @State private var selectedInterface: String = ""
+    @State private var copiedAddress: String?
     @State private var startupVerificationTask: Task<Void, Never>?
     @State private var traffic = TrafficDisplay.zero
     @State private var lastUploadBytes: UInt64 = 0
@@ -64,11 +87,13 @@ struct ContentView: View {
     @State private var lastTrafficDate = Date()
     @State private var lastLiveActivityDate = Date.distantPast
 
+    private let tick = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+
     enum ServerStatus {
         case stopped, starting, running, failed
     }
 
-    struct TrafficDisplay {
+    struct TrafficDisplay: Equatable {
         var uploadRateText: String
         var downloadRateText: String
         var totalText: String
@@ -78,6 +103,14 @@ struct ContentView: View {
             downloadRateText: "0 B/s",
             totalText: "0 B"
         )
+    }
+
+    var localIP: String {
+        guard !addresses.isEmpty else { return "N/A" }
+        if let match = addresses.first(where: { $0.interface == selectedInterface }) {
+            return match.address
+        }
+        return addresses[0].address
     }
 
     var proxyAddress: String {
@@ -117,6 +150,22 @@ struct ContentView: View {
         case .failed:
             return "The previous launch ended unexpectedly. Check the settings and try again."
         }
+    }
+
+    /// The listen port has to be a usable TCP port: the server silently fails
+    /// to bind otherwise.
+    var portError: String? {
+        guard let port = UInt16(listenPortText), port > 0 else {
+            return "Listen Port must be between 1 and 65535."
+        }
+        guard udpListenPortText.isEmpty
+                || (UInt16(udpListenPortText) ?? 0) > 0 else {
+            return "UDP Listen Port must be between 1 and 65535."
+        }
+        guard let workers = Int(workersText), workers > 0 else {
+            return "Workers must be 1 or more."
+        }
+        return nil
     }
 
     var statusColor: Color {
@@ -187,7 +236,7 @@ struct ContentView: View {
             .padding()
         }
         .onAppear {
-            localIP = getLocalIPAddress()
+            refreshAddresses()
             syncBackgroundAudio(for: serverStatus)
             if autoStart && !isRunning {
                 startServer()
@@ -200,9 +249,13 @@ struct ContentView: View {
             if newPhase == .active && serverStatus == .running {
                 BackgroundAudioManager.shared.resume()
             }
+            if newPhase == .active {
+                refreshAddresses()
+            }
         }
-        .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { _ in
+        .onReceive(tick) { _ in
             refreshTrafficStats()
+            refreshAddresses()
         }
         .onOpenURL { url in
             handleDeepLink(url)
@@ -230,7 +283,14 @@ struct ContentView: View {
                 .font(.subheadline)
                 .foregroundColor(.secondary)
 
-            if serverStatus == .running {
+            if let portError, !isRunning {
+                Label(portError, systemImage: "exclamationmark.triangle")
+                    .font(.caption)
+                    .foregroundColor(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if serverStatus == .running || traffic != .zero {
                 HStack(spacing: 12) {
                     Label(traffic.uploadRateText, systemImage: "arrow.up")
                     Label(traffic.downloadRateText, systemImage: "arrow.down")
@@ -244,35 +304,54 @@ struct ContentView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
         .background(Color(.secondarySystemBackground))
-        .cornerRadius(16)
+        .cornerRadius(8)
     }
 
     var addressCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Proxy Address")
-                .font(.caption)
-                .foregroundColor(.secondary)
+            HStack {
+                Text("Proxy Address")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Spacer()
+                if addresses.count > 1 {
+                    Picker("", selection: $selectedInterface) {
+                        ForEach(addresses) { entry in
+                            Text(interfaceLabel(entry.interface))
+                                .tag(entry.interface)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .fixedSize()
+                }
+            }
 
             Text(proxyAddress)
                 .font(.system(.title3, design: .monospaced))
                 .fontWeight(.semibold)
                 .textSelection(.enabled)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
 
             Button(action: copyProxyAddress) {
-                Text(showCopied ? "Copied Address" : "Copy Address")
+                Label(copiedAddress == proxyAddress ? "Copied" : "Copy",
+                      systemImage: copiedAddress == proxyAddress
+                        ? "checkmark" : "doc.on.doc")
                     .font(.subheadline)
                     .fontWeight(.semibold)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
-                    .background(showCopied ? Color.green : Color.accentColor)
+                    .background(copiedAddress == proxyAddress
+                                ? Color.green : Color.accentColor)
                     .foregroundColor(.white)
-                    .cornerRadius(12)
+                    .cornerRadius(8)
             }
+            .disabled(addresses.isEmpty)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
         .background(Color(.secondarySystemBackground))
-        .cornerRadius(16)
+        .cornerRadius(8)
     }
 
     var primaryActionButton: some View {
@@ -287,9 +366,10 @@ struct ContentView: View {
             .padding(.vertical, 18)
             .background(primaryButtonColor)
             .foregroundColor(.white)
-            .cornerRadius(16)
+            .cornerRadius(8)
         }
-        .disabled(serverStatus == .starting)
+        .disabled(serverStatus == .starting
+                  || (!isRunning && portError != nil))
     }
 
     @ViewBuilder
@@ -307,10 +387,30 @@ struct ContentView: View {
     }
 
     func copyProxyAddress() {
-        UIPasteboard.general.string = proxyAddress
-        showCopied = true
+        let value = proxyAddress
+        UIPasteboard.general.string = value
+        copiedAddress = value
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            showCopied = false
+            if copiedAddress == value {
+                copiedAddress = nil
+            }
+        }
+    }
+
+    func interfaceLabel(_ name: String) -> String {
+        if name.hasPrefix("bridge") { return "Hotspot" }
+        if name == "en0" { return "Wi-Fi" }
+        if name.hasPrefix("pdp_ip") { return "Cellular" }
+        return name
+    }
+
+    func refreshAddresses() {
+        let found = localIPAddresses()
+        guard found != addresses else { return }
+
+        addresses = found
+        if !found.contains(where: { $0.interface == selectedInterface }) {
+            selectedInterface = found.first?.interface ?? ""
         }
     }
 
@@ -347,7 +447,7 @@ struct ContentView: View {
         lastLiveActivityDate = .distantPast
         isRunning = true
         serverStatus = .starting
-        localIP = getLocalIPAddress()
+        refreshAddresses()
         startupVerificationTask?.cancel()
 
         DispatchQueue.global().async {
@@ -463,7 +563,15 @@ struct ContentView: View {
     }
 
     func refreshTrafficStats() {
-        guard serverStatus == .running else { return }
+        guard serverStatus == .running else {
+            // Keep the session total on screen, but stop showing a live rate.
+            if traffic.uploadRateText != "0 B/s"
+                || traffic.downloadRateText != "0 B/s" {
+                traffic.uploadRateText = "0 B/s"
+                traffic.downloadRateText = "0 B/s"
+            }
+            return
+        }
 
         var tcpUpload: UInt64 = 0
         var tcpDownload: UInt64 = 0
