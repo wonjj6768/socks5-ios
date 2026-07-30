@@ -10,6 +10,7 @@ iPhone hotspot.
 * Standard `UDP ASSOCIATE` command.
 * Fixed-port SOCKS5 UDP relay for clients that expect one UDP port.
 * Live traffic counters in the app and Dynamic Island.
+* Hotspot-aware proxy address with per-interface selection.
 * Extended `FWD UDP` command. (UDP in TCP)
 * Multiple username/password authentication.
 
@@ -39,6 +40,9 @@ the unsigned IPA.
 
 The app shows 1-second TCP/UDP upload and download rates plus total relayed
 bytes. The same counters are also shown in the Live Activity / Dynamic Island.
+
+The Live Activity `Stop` button runs an App Intent, so it stops the server
+without bringing the app to the foreground.
 
 ## Build
 
