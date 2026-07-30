@@ -43,6 +43,7 @@ jobs:
 
           proxy = ("127.0.0.1", 18888)
           echo = ("127.0.0.1", 19999)
+          tcp_echo = ("127.0.0.1", 19998)
 
           def echo_server():
               s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -52,6 +53,26 @@ jobs:
                   s.sendto(data, addr)
 
           threading.Thread(target=echo_server, daemon=True).start()
+
+          def tcp_echo_server():
+              s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+              s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+              s.bind(tcp_echo)
+              s.listen(8)
+              while True:
+                  conn, _ = s.accept()
+                  threading.Thread(target=tcp_echo_conn, args=(conn,),
+                                   daemon=True).start()
+
+          def tcp_echo_conn(conn):
+              with conn:
+                  while True:
+                      data = conn.recv(65536)
+                      if not data:
+                          return
+                      conn.sendall(data)
+
+          threading.Thread(target=tcp_echo_server, daemon=True).start()
 
           def read_exact(sock, n):
               data = b""
@@ -90,9 +111,51 @@ jobs:
           data, _ = udp.recvfrom(2048)
           off = 10 if data[3] == 1 else None
           assert off and data[off:] == payload, data.hex()
-          tcp.close()
+
+          # TCP CONNECT with payloads larger than the task stack.
+          def connect_via_proxy(host, port):
+              s = socket.create_connection(proxy, timeout=10)
+              s.sendall(b"\x05\x01\x00")
+              assert read_exact(s, 2) == b"\x05\x00"
+              s.sendall(b"\x05\x01\x00\x01" + socket.inet_aton(host)
+                        + struct.pack("!H", port))
+              head = read_exact(s, 4)
+              assert head[:2] == b"\x05\x00", head.hex()
+              read_exact(s, 6 if head[3] == 1 else 18)
+              return s
+
+          conn = connect_via_proxy(*tcp_echo)
+          blob = os.urandom(1 << 20)
+          received = bytearray()
+
+          def drain():
+              while len(received) < len(blob):
+                  chunk = conn.recv(65536)
+                  if not chunk:
+                      break
+                  received.extend(chunk)
+
+          reader = threading.Thread(target=drain, daemon=True)
+          reader.start()
+          conn.sendall(blob)
+          reader.join(30)
+          assert bytes(received) == blob, (len(received), len(blob))
+          conn.close()
+
+          # Leave the UDP association open so the stop path has to tear the
+          # dispatcher down itself.
           PY
-          kill $SERVER_PID || true
+          # The UDP dispatcher must not keep the task system alive after a stop.
+          kill -INT $SERVER_PID
+          for _ in $(seq 1 50); do
+            kill -0 $SERVER_PID 2>/dev/null || break
+            sleep 0.2
+          done
+          if kill -0 $SERVER_PID 2>/dev/null; then
+            echo "server did not exit after stop"
+            kill -9 $SERVER_PID || true
+            exit 1
+          fi
           trap - EXIT
           make clean
           ./build-apple.sh

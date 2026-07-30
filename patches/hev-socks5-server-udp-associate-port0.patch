@@ -26,18 +26,23 @@ index 7a5d04d..122508a 100644
 +int hev_config_get_udp_listen_port_single (void);
  const char *hev_config_get_udp_public_address (int family);
 diff --git a/src/hev-main.c b/src/hev-main.c
-index 9501602..24b7084 100644
+index 9501602..c781829 100644
 --- a/src/hev-main.c
 +++ b/src/hev-main.c
-@@ -22,2 +22,3 @@
+@@ -22,2 +22,4 @@
  #include "hev-socks5-proxy.h"
 +#include "hev-traffic-stats.h"
++#include "hev-socks5-udp-dispatcher.h"
  
-@@ -55,2 +56,4 @@ hev_socks5_server_main_inner (void)
+@@ -55,2 +57,4 @@ hev_socks5_server_main_inner (void)
  
 +    hev_socks5_traffic_stats_reset ();
 +
      log_file = hev_config_get_misc_log_file ();
+@@ -131,2 +135,3 @@ hev_socks5_server_quit (void)
+ {
++    hev_socks5_udp_dispatcher_stop ();
+     hev_socks5_proxy_stop ();
 diff --git a/src/hev-main.h b/src/hev-main.h
 index 37a3c8c..7c824bb 100644
 --- a/src/hev-main.h
@@ -149,10 +154,10 @@ index c3f9ed8..fc6d82d 100644
  };
 diff --git a/src/hev-socks5-udp-dispatcher.c b/src/hev-socks5-udp-dispatcher.c
 new file mode 100644
-index 0000000..820336e
+index 0000000..bd58206
 --- /dev/null
 +++ b/src/hev-socks5-udp-dispatcher.c
-@@ -0,0 +1,563 @@
+@@ -0,0 +1,602 @@
 +/*
 + ============================================================================
 + Name        : hev-socks5-udp-dispatcher.c
@@ -170,6 +175,7 @@ index 0000000..820336e
 +
 +#include <hev-task.h>
 +#include <hev-task-io.h>
++#include <hev-task-io-pipe.h>
 +#include <hev-task-io-socket.h>
 +#include <hev-memory-allocator.h>
 +
@@ -197,6 +203,7 @@ index 0000000..820336e
 +static HevList session_list;
 +static HevTask *dispatcher_task;
 +static int dispatcher_fd = -1;
++static int quit_fds[2] = { -1, -1 };
 +static int dispatcher_family = AF_INET6;
 +static struct sockaddr_in6 dispatcher_addr;
 +
@@ -340,6 +347,7 @@ index 0000000..820336e
 +    (void)data;
 +
 +    hev_task_add_fd (task, dispatcher_fd, POLLIN);
++    hev_task_add_fd (task, quit_fds[0], POLLIN);
 +
 +    for (;;) {
 +        struct sockaddr_in6 client;
@@ -348,6 +356,10 @@ index 0000000..820336e
 +        socklen_t alen;
 +        char buf[UDP_BUF_SIZE];
 +        ssize_t len;
++        char val;
++
++        if (read (quit_fds[0], &val, sizeof (val)) > 0)
++            break;
 +
 +        sap = (dispatcher_family == AF_INET) ? (struct sockaddr *)&client4 :
 +                                               (struct sockaddr *)&client;
@@ -390,6 +402,16 @@ index 0000000..820336e
 +                break;
 +        }
 +    }
++
++    hev_task_del_fd (task, quit_fds[0]);
++    hev_task_del_fd (task, dispatcher_fd);
++    close (dispatcher_fd);
++    close (quit_fds[0]);
++    close (quit_fds[1]);
++    dispatcher_fd = -1;
++    quit_fds[0] = -1;
++    quit_fds[1] = -1;
++    dispatcher_task = NULL;
 +}
 +
 +static int
@@ -479,6 +501,13 @@ index 0000000..820336e
 +    if (!dispatcher_task)
 +        goto exit;
 +
++    res = hev_task_io_pipe_pipe (quit_fds);
++    if (res < 0) {
++        hev_task_unref (dispatcher_task);
++        dispatcher_task = NULL;
++        goto exit;
++    }
++
 +    hev_task_run (dispatcher_task, dispatcher_task_entry, NULL);
 +
 +    return 0;
@@ -566,6 +595,18 @@ index 0000000..820336e
 +    session_queue_clear (session);
 +}
 +
++void
++hev_socks5_udp_dispatcher_stop (void)
++{
++    char val = 's';
++
++    if (quit_fds[1] < 0)
++        return;
++
++    if (write (quit_fds[1], &val, sizeof (val)) < 0)
++        LOG_E ("socks5 udp dispatcher write quit");
++}
++
 +static int
 +dispatcher_yielder (HevTaskYieldType type, void *data)
 +{
@@ -623,6 +664,9 @@ index 0000000..820336e
 +
 +    if (!session->udp_client_known)
 +        return 0;
++
++    if (dispatcher_fd < 0)
++        return -1;
 +
 +    alen = hev_socks5_addr_from_sockaddr6 (&udp.addr, remote);
 +    udp.datlen = 0;
@@ -718,10 +762,10 @@ index 0000000..820336e
 +}
 diff --git a/src/hev-socks5-udp-dispatcher.h b/src/hev-socks5-udp-dispatcher.h
 new file mode 100644
-index 0000000..8868438
+index 0000000..c409bed
 --- /dev/null
 +++ b/src/hev-socks5-udp-dispatcher.h
-@@ -0,0 +1,23 @@
+@@ -0,0 +1,24 @@
 +/*
 + ============================================================================
 + Name        : hev-socks5-udp-dispatcher.h
@@ -743,6 +787,7 @@ index 0000000..8868438
 +                                       struct sockaddr_in6 *src);
 +int hev_socks5_udp_dispatcher_splice (HevSocks5UDP *udp, int fd);
 +void hev_socks5_udp_dispatcher_unregister (HevSocks5Session *session);
++void hev_socks5_udp_dispatcher_stop (void);
 +
 +#endif /* __HEV_SOCKS5_UDP_DISPATCHER_H__ */
 diff --git a/src/hev-traffic-stats.c b/src/hev-traffic-stats.c
@@ -851,7 +896,7 @@ index 0000000..4d82e2c
 +void hev_socks5_traffic_stats_reset (void);
 +
 +#endif /* __HEV_TRAFFIC_STATS_H__ */
-diff --git a/src/core/src/hev-socks5-server.c b/src/core/src/hev-socks5-server.c
+diff --git a/src/core/src/hev-socks5-server.c b/src/hev-socks5-server.c
 index 089948c..1d43557 100644
 --- a/src/core/src/hev-socks5-server.c
 +++ b/src/core/src/hev-socks5-server.c
@@ -864,11 +909,11 @@ index 089948c..1d43557 100644
 +        return 0;
 +    }
  
-diff --git a/src/core/src/hev-socks5-tcp.c b/src/core/src/hev-socks5-tcp.c
-index a2db80e..5112ae4 100644
+diff --git a/src/core/src/hev-socks5-tcp.c b/src/hev-socks5-tcp.c
+index a2db80e..ff84127 100644
 --- a/src/core/src/hev-socks5-tcp.c
 +++ b/src/core/src/hev-socks5-tcp.c
-@@ -9,2 +9,9 @@
+@@ -9,2 +9,10 @@
  
 +#include <errno.h>
 +#include <unistd.h>
@@ -876,24 +921,24 @@ index a2db80e..5112ae4 100644
 +#include <hev-task.h>
 +#include <hev-task-io.h>
 +#include <hev-task-io-socket.h>
++#include <hev-memory-allocator.h>
 +
  #include "hev-socks5.h"
-@@ -12,2 +19,3 @@
+@@ -12,2 +20,3 @@
  #include "hev-socks5-logger-priv.h"
 +#include "../../hev-traffic-stats.h"
  
-@@ -16,2 +24,36 @@
+@@ -16,2 +25,35 @@
  #define task_io_yielder hev_socks5_task_io_yielder
 +#define TCP_BUF_SIZE 8192
 +
 +static int
-+tcp_copy_once (HevSocks5TCP *self, int in, int out, int upload)
++tcp_copy_once (HevSocks5TCP *self, int in, int out, int upload, char *buf)
 +{
-+    char buf[TCP_BUF_SIZE];
 +    ssize_t len;
 +    ssize_t off = 0;
 +
-+    len = recv (in, buf, sizeof (buf), MSG_DONTWAIT);
++    len = recv (in, buf, TCP_BUF_SIZE, MSG_DONTWAIT);
 +    if (len <= 0) {
 +        if ((len < 0) && (errno == EAGAIN))
 +            return 0;
@@ -919,7 +964,19 @@ index a2db80e..5112ae4 100644
 +    return 1;
 +}
  
-@@ -33,4 +75,34 @@ hev_socks5_tcp_splicer (HevSocks5TCP *self, int fd)
+@@ -21,2 +63,3 @@ hev_socks5_tcp_splicer (HevSocks5TCP *self, int fd)
+     HevTask *task = hev_task_self ();
++    char *buf;
+     int cfd;
+@@ -30,2 +73,7 @@ hev_socks5_tcp_splicer (HevSocks5TCP *self, int fd)
+ 
++    /* The copy buffer lives on the heap: task stacks default to 8KiB. */
++    buf = hev_malloc (TCP_BUF_SIZE);
++    if (!buf)
++        return -1;
++
+     res = hev_task_add_fd (task, fd, POLLIN | POLLOUT);
+@@ -33,4 +81,36 @@ hev_socks5_tcp_splicer (HevSocks5TCP *self, int fd)
          hev_task_mod_fd (task, fd, POLLIN | POLLOUT);
 +    res = hev_task_add_fd (task, cfd, POLLIN | POLLOUT);
 +    if (res < 0)
@@ -934,9 +991,9 @@ index a2db80e..5112ae4 100644
 +        int res_b = 0;
 +
 +        if (!done_f)
-+            res_f = tcp_copy_once (self, cfd, fd, 1);
++            res_f = tcp_copy_once (self, cfd, fd, 1, buf);
 +        if (!done_b)
-+            res_b = tcp_copy_once (self, fd, cfd, 0);
++            res_b = tcp_copy_once (self, fd, cfd, 0, buf);
 +
 +        if (res_f < 0)
 +            done_f = 1;
@@ -949,9 +1006,11 @@ index a2db80e..5112ae4 100644
 +            type = HEV_TASK_YIELD;
 +        else
 +            type = HEV_TASK_WAITIO;
- 
--    hev_task_io_splice (cfd, cfd, fd, fd, 8192, task_io_yielder, self);
++
 +        if (task_io_yielder (type, self))
 +            break;
 +    }
+ 
+-    hev_task_io_splice (cfd, cfd, fd, fd, 8192, task_io_yielder, self);
++    hev_free (buf);
  
