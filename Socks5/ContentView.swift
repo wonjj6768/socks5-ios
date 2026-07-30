@@ -48,8 +48,9 @@ func localIPAddresses() -> [NetworkAddress] {
                               nil, 0, NI_NUMERICHOST)
         guard res == 0 else { continue }
 
-        found.append(NetworkAddress(interface: name,
-                                    address: String(cString: hostname)))
+        let bytes = hostname.prefix { $0 != 0 }.map { UInt8(bitPattern: $0) }
+        let text = String(decoding: bytes, as: UTF8.self)
+        found.append(NetworkAddress(interface: name, address: text))
     }
 
     func rank(_ name: String) -> Int {
@@ -456,36 +457,38 @@ struct ContentView: View {
         serverStatus = .starting
         refreshAddresses()
         startupVerificationTask?.cancel()
+        beginStartupVerification()
 
-        DispatchQueue.global().async {
-            let conf = """
-                main:
-                  workers: \(workersText)
-                  port: \(listenPortText)
-                  listen-address: '\(listenAddrText)'
-                  udp-port: \(udpListenPortText)
-                  udp-listen-address: '\(udpListenAddrText)'
-                  listen-ipv6-only: \(listenIpv6OnlyToggle)
-                  bind-address-v4: '\(bindIpv4AddrText)'
-                  bind-address-v6: '\(bindIpv6AddrText)'
-                  bind-interface: '\(bindIfaceText)'
-                auth:
-                  username: '\(authUserText)'
-                  password: '\(authPassText)'
-                """
+        // The config is built here so the worker closure never touches
+        // main-actor state.
+        let conf = """
+            main:
+              workers: \(workersText)
+              port: \(listenPortText)
+              listen-address: '\(listenAddrText)'
+              udp-port: \(udpListenPortText)
+              udp-listen-address: '\(udpListenAddrText)'
+              listen-ipv6-only: \(listenIpv6OnlyToggle)
+              bind-address-v4: '\(bindIpv4AddrText)'
+              bind-address-v6: '\(bindIpv6AddrText)'
+              bind-interface: '\(bindIfaceText)'
+            auth:
+              username: '\(authUserText)'
+              password: '\(authPassText)'
+            """
 
-            DispatchQueue.main.async {
-                beginStartupVerification()
-            }
+        Task {
+            // hev_socks5_server_main_from_str blocks until the server stops.
+            let result = await Task.detached {
+                conf.withCString { ptr in
+                    hev_socks5_server_main_from_str(ptr, UInt32(strlen(ptr)))
+                }
+            }.value
 
-            let result = hev_socks5_server_main_from_str(conf, UInt32(strlen(conf)))
-
-            DispatchQueue.main.async {
-                startupVerificationTask?.cancel()
-                startupVerificationTask = nil
-                isRunning = false
-                serverStatus = result == 0 ? .stopped : .failed
-            }
+            startupVerificationTask?.cancel()
+            startupVerificationTask = nil
+            isRunning = false
+            serverStatus = result == 0 ? .stopped : .failed
         }
     }
 
