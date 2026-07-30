@@ -17,6 +17,11 @@ struct NetworkAddress: Identifiable, Equatable {
     var id: String { interface }
 }
 
+/// Single-resume guard for the startup probe continuation.
+final class ProbeResult: @unchecked Sendable {
+    var resolved = false
+}
+
 /// Reachable IPv4 addresses, personal hotspot first.
 ///
 /// `bridge100` is the interface iOS creates while Personal Hotspot is on, and
@@ -242,16 +247,15 @@ struct ContentView: View {
                 startServer()
             }
         }
-        .onChange(of: serverStatus) { newStatus in
+        .onChange(of: serverStatus) { _, newStatus in
             syncBackgroundAudio(for: newStatus)
         }
-        .onChange(of: scenePhase) { newPhase in
-            if newPhase == .active && serverStatus == .running {
+        .onChange(of: scenePhase) { _, newPhase in
+            guard newPhase == .active else { return }
+            if serverStatus == .running {
                 BackgroundAudioManager.shared.resume()
             }
-            if newPhase == .active {
-                refreshAddresses()
-            }
+            refreshAddresses()
         }
         .onReceive(tick) { _ in
             refreshTrafficStats()
@@ -518,11 +522,13 @@ struct ContentView: View {
 
         return await withCheckedContinuation { continuation in
             let queue = DispatchQueue(label: "Socks5.StartupProbe")
-            var resolved = false
+            // Both the state handler and the timeout run on `queue`, so a plain
+            // reference box is enough to resume the continuation exactly once.
+            let probe = ProbeResult()
 
-            func finish(_ value: Bool) {
-                guard !resolved else { return }
-                resolved = true
+            let finish: @Sendable (Bool) -> Void = { value in
+                guard !probe.resolved else { return }
+                probe.resolved = true
                 connection.cancel()
                 continuation.resume(returning: value)
             }
