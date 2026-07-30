@@ -39,8 +39,8 @@ final class ServerLiveActivityManager {
     private func startOrUpdate(with state: Socks5ActivityAttributes.ContentState) async {
         let content = ActivityContent(state: state, staleDate: nil)
 
-        if let activity {
-            await activity.update(content)
+        if let current = activity {
+            await current.update(content)
             lastState = state
             return
         }
@@ -58,10 +58,10 @@ final class ServerLiveActivityManager {
     }
 
     private func end(with state: Socks5ActivityAttributes.ContentState) async {
-        guard let activity else { return }
+        guard let current = activity else { return }
 
         let content = ActivityContent(state: state, staleDate: Date())
-        await activity.end(content, dismissalPolicy: .immediate)
+        await current.end(content, dismissalPolicy: .immediate)
         self.activity = nil
         lastState = nil
     }

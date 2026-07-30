@@ -54,15 +54,16 @@ final class BackgroundAudioManager {
     // MARK: - Interruption & Route Change Handling
 
     private func setupNotifications() {
-        // Audio session notifications can arrive on any thread, so the work is
-        // hopped back to the main actor.
+        // `Notification` is not Sendable, so only the raw reason value crosses
+        // into the main-actor hop.
         NotificationCenter.default.addObserver(
             forName: AVAudioSession.interruptionNotification,
             object: AVAudioSession.sharedInstance(),
             queue: .main
         ) { [weak self] notification in
+            let raw = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt
             MainActor.assumeIsolated {
-                self?.handleInterruption(notification)
+                self?.handleInterruption(raw)
             }
         }
 
@@ -71,16 +72,16 @@ final class BackgroundAudioManager {
             object: AVAudioSession.sharedInstance(),
             queue: .main
         ) { [weak self] notification in
+            let raw = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt
             MainActor.assumeIsolated {
-                self?.handleRouteChange(notification)
+                self?.handleRouteChange(raw)
             }
         }
     }
 
-    private func handleInterruption(_ notification: Notification) {
-        guard let userInfo = notification.userInfo,
-              let typeValue = userInfo[AVAudioSessionInterruptionTypeKey] as? UInt,
-              let type = AVAudioSession.InterruptionType(rawValue: typeValue) else {
+    private func handleInterruption(_ rawType: UInt?) {
+        guard let rawType,
+              let type = AVAudioSession.InterruptionType(rawValue: rawType) else {
             return
         }
 
@@ -102,10 +103,9 @@ final class BackgroundAudioManager {
         }
     }
 
-    private func handleRouteChange(_ notification: Notification) {
-        guard let userInfo = notification.userInfo,
-              let reasonValue = userInfo[AVAudioSessionRouteChangeReasonKey] as? UInt,
-              let reason = AVAudioSession.RouteChangeReason(rawValue: reasonValue) else {
+    private func handleRouteChange(_ rawReason: UInt?) {
+        guard let rawReason,
+              let reason = AVAudioSession.RouteChangeReason(rawValue: rawReason) else {
             return
         }
 
