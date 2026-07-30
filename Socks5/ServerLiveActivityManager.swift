@@ -5,11 +5,14 @@ import Foundation
 final class ServerLiveActivityManager {
     static let shared = ServerLiveActivityManager()
 
-    private var activity: Activity<Socks5ActivityAttributes>?
     private var lastState: Socks5ActivityAttributes.ContentState?
 
-    private init() {
-        activity = Activity<Socks5ActivityAttributes>.activities.first
+    private init() {}
+
+    /// `Activity` is not Sendable, so it is looked up per call instead of being
+    /// stored across suspension points.
+    private var current: Activity<Socks5ActivityAttributes>? {
+        Activity<Socks5ActivityAttributes>.activities.first
     }
 
     func sync(isRunning: Bool, statusText: String, proxyAddress: String,
@@ -39,14 +42,14 @@ final class ServerLiveActivityManager {
     private func startOrUpdate(with state: Socks5ActivityAttributes.ContentState) async {
         let content = ActivityContent(state: state, staleDate: nil)
 
-        if let current = activity {
+        if let current {
             await current.update(content)
             lastState = state
             return
         }
 
         do {
-            activity = try Activity.request(
+            _ = try Activity.request(
                 attributes: Socks5ActivityAttributes(title: "SOCKS5 Server"),
                 content: content,
                 pushType: nil
@@ -58,11 +61,10 @@ final class ServerLiveActivityManager {
     }
 
     private func end(with state: Socks5ActivityAttributes.ContentState) async {
-        guard let current = activity else { return }
+        guard let current else { return }
 
         let content = ActivityContent(state: state, staleDate: Date())
         await current.end(content, dismissalPolicy: .immediate)
-        self.activity = nil
         lastState = nil
     }
 }
