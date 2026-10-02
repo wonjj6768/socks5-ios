@@ -62,6 +62,22 @@ git apply ../patches/hev-socks5-server-udp-associate-port0.patch
 1. Copy HevSocks5Server.xcframework to this project directory.
 2. Build it with Xcode.
 
+### GitHub Actions
+
+The unsigned IPA workflow builds only the iPhone `arm64` engine library by
+default, rather than all eight iOS, macOS, and tvOS architecture targets. Enable
+`include_simulators` when starting the workflow if you also need an XCFramework
+for both Apple Silicon and Intel iOS simulators. The full multi-platform build
+remains available through the upstream `build-apple.sh` command above.
+
+The patched XCFramework is cached by engine revision, patch, build script, Xcode,
+SDK versions, runner architecture, and simulator option. App-only changes reuse
+the engine library; changing any of those inputs rebuilds it. The native TCP/UDP
+smoke test still runs on every build, including cache hits. Engine compilation
+and the app build use the runner's available CPU cores, and Xcode prints a build
+timing summary. The engine cache is saved before the app build so it can also be
+reused after a Swift compilation failure.
+
 ## Dependencies
 
 * HevSocks5Server - https://github.com/heiher/hev-socks5-server

@@ -1,7 +1,18 @@
 name: Build Socks5 IPA (Unsigned)
 
 on:
+  push:
+    branches:
+      - codex/faster-ipa-build-20261002
   workflow_dispatch:
+    inputs:
+      include_simulators:
+        description: Include iOS simulator libraries in the XCFramework (slower)
+        type: boolean
+        default: false
+
+env:
+  HEV_REV: 52d7e475ef932e93540d1d964e02839f233ad981
 
 jobs:
   build:
@@ -11,14 +22,33 @@ jobs:
       - name: Checkout socks5-ios
         uses: actions/checkout@v4
 
-      - name: Clone & Build hev-socks5-server xcframework
+      - name: Read Apple build settings
+        id: build-settings
+        run: |
+          echo "jobs=$(sysctl -n hw.logicalcpu)" >> "$GITHUB_OUTPUT"
+          xcodebuild -version > "$RUNNER_TEMP/hev-toolchain.txt"
+          xcrun --sdk iphoneos --show-sdk-build-version >> "$RUNNER_TEMP/hev-toolchain.txt"
+          xcrun --sdk iphonesimulator --show-sdk-build-version >> "$RUNNER_TEMP/hev-toolchain.txt"
+          TOOLCHAIN=$(shasum -a 256 "$RUNNER_TEMP/hev-toolchain.txt" | awk '{print $1}')
+          echo "toolchain=$TOOLCHAIN" >> "$GITHUB_OUTPUT"
+
+      - name: Restore patched iOS XCFramework
+        id: hev-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: build/HevSocks5Server.xcframework
+          key: hev-ios-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.build-settings.outputs.toolchain }}-${{ env.HEV_REV }}-${{ inputs.include_simulators || false }}-${{ hashFiles('patches/hev-socks5-server-udp-associate-port0.patch', 'scripts/build-hev-ios.sh') }}
+
+      - name: Build engine and run smoke test
+        env:
+          BUILD_JOBS: ${{ steps.build-settings.outputs.jobs }}
         run: |
           git clone https://github.com/heiher/hev-socks5-server
           cd hev-socks5-server
-          git checkout 52d7e475ef932e93540d1d964e02839f233ad981
-          git submodule update --init --recursive
+          git checkout "$HEV_REV"
+          git submodule update --init --recursive --jobs "$BUILD_JOBS"
           git apply ../patches/hev-socks5-server-udp-associate-port0.patch
-          make exec
+          make -j"$BUILD_JOBS" exec
           cat > /tmp/hev-socks5-smoke.yml <<'EOF'
           main:
             workers: 1
@@ -158,10 +188,33 @@ jobs:
           fi
           trap - EXIT
           make clean
-          ./build-apple.sh
-          cp -r HevSocks5Server.xcframework ../
+
+      - name: Build patched iOS XCFramework
+        if: steps.hev-cache.outputs.cache-hit != 'true'
+        env:
+          BUILD_JOBS: ${{ steps.build-settings.outputs.jobs }}
+          INCLUDE_SIMULATORS: ${{ inputs.include_simulators || false }}
+        run: |
+          bash scripts/build-hev-ios.sh \
+            "$GITHUB_WORKSPACE/hev-socks5-server" \
+            "$GITHUB_WORKSPACE/build/HevSocks5Server.xcframework" \
+            "$INCLUDE_SIMULATORS"
+
+      # Keep the expensive engine build even if a later Swift build fails.
+      - name: Save patched iOS XCFramework
+        if: steps.hev-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: build/HevSocks5Server.xcframework
+          key: ${{ steps.hev-cache.outputs.cache-primary-key }}
+
+      - name: Install patched iOS XCFramework
+        run: |
+          rsync -a --delete build/HevSocks5Server.xcframework/ HevSocks5Server.xcframework/
 
       - name: Build (Unsigned)
+        env:
+          BUILD_JOBS: ${{ steps.build-settings.outputs.jobs }}
         run: |
           xcodebuild build \
             -project Socks5.xcodeproj \
@@ -169,6 +222,10 @@ jobs:
             -configuration Release \
             -destination "generic/platform=iOS" \
             -derivedDataPath build/DerivedData \
+            -parallelizeTargets \
+            -jobs "$BUILD_JOBS" \
+            -showBuildTimingSummary \
+            COMPILER_INDEX_STORE_ENABLE=NO \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
@@ -191,10 +248,11 @@ jobs:
           name: Socks5-IPA-Unsigned
           path: build/ipa/Socks5-unsigned.ipa
           retention-days: 7
+          compression-level: 0
 
       - name: Upload patched xcframework
         uses: actions/upload-artifact@v4
         with:
           name: HevSocks5Server-xcframework-patched
-          path: HevSocks5Server.xcframework
+          path: build/HevSocks5Server.xcframework
           retention-days: 7
